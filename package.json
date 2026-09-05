@@ -7,6 +7,14 @@
   "publisher": "plant",
   "icon": "icons/icon.png",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alabsi91/vscode-theme-editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alabsi91/vscode-theme-editor/issues"
+  },
+  "homepage": "https://github.com/alabsi91/vscode-theme-editor#readme",
   "type": "module",
   "main": "./lib/index.mjs",
   "engines": {
@@ -45,7 +53,8 @@
         {
           "id": "themeEditor.panel",
           "name": "Theme Editor",
-          "type": "webview"
+          "type": "webview",
+          "icon": "icons/logo.svg"
         }
       ]
     },
