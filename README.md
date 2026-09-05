@@ -30,7 +30,7 @@ picked, and are saved with the theme. Dragging a slider back to the middle undoe
 
 The syntax panel lists the theme's token rules in plain English (function name, string, comment)
 rather than raw TextMate scopes. Turn on _Follow my cursor_, put the caret on a token, and it tells
-you which rule colors it. When nothing matches, it offers to create a rule. It also warns you when a
+you which rule colors it and offers to give that token a rule of its own. It also warns you when a
 language server is painting the token instead, which is the case where editing a rule looks broken
 but isn't.
 

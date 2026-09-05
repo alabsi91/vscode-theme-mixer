@@ -206,6 +206,21 @@ function getUnexpiredEntry(entry: ThemeIndexEntry | undefined, nowMilliseconds: 
   return entry;
 }
 
+/**
+ * One theme, both sides. The rows the comments below point at:
+ *
+ * 1. Local live, nothing remote → push it
+ * 2. Local tombstone, nothing remote → push the tombstone
+ * 3. Nothing local, remote live → write it locally
+ * 4. Nothing local, remote tombstone → keep the tombstone
+ * 5. Equal revision vectors → nothing to do
+ * 6. Local ahead → push, or delete remotely when local is a tombstone
+ * 7. Remote ahead → write locally, or delete locally when remote is a tombstone
+ * 8. Concurrent, same document → merge the vectors, the later `updatedAt` keeps its entry
+ * 9. Concurrent, different documents → the later `updatedAt` keeps the name, the other becomes "(conflict)"
+ * 10. Concurrent, one side deleted → the edit wins
+ * 11. Concurrent, both deleted → the later tombstone
+ */
 async function mergeSavedTheme(
   savedThemeId: string,
   localEntryOrUndefined: ThemeIndexEntry | undefined,

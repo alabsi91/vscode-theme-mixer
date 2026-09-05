@@ -3,8 +3,8 @@
 //
 //   GITHUB_TOKEN=ghp_... node scripts/probe-gist-api.mjs
 //
-// Creates one secret gist named "vscode-theme-editor:probe", checks the facts the sync design depends on
-// (docs/gist-sync-plan.md §10), and deletes the gist again.
+// Creates one secret gist named "vscode-theme-editor:probe", checks the facts the sync design depends on, and
+// deletes the gist again.
 
 import assert from "node:assert/strict";
 

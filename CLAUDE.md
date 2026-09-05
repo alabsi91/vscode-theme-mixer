@@ -2,10 +2,6 @@
 
 A VS Code extension that mixes, edits and exports color themes. TypeScript, ESM, bundled with tsdown.
 
-`docs/vscode-api-brief.md` is verified API research behind the whole design. **Read it before changing
-anything that touches the VS Code API.** It overrides guesses, and several of its findings are load
-bearing.
-
 ## Verify
 
 ```bash
@@ -78,7 +74,7 @@ migration runs first inside it, every activate.
 
 ## Sync
 
-Design in `docs/gist-sync-plan.md`. The facts that hold it up:
+The facts that hold it up:
 
 - **What syncs:** the saved theme documents and their index entries, through one secret gist named
   `vscode-theme-editor:themes`. Never the working copy, the generated files, the token, the ETag, the
@@ -97,7 +93,8 @@ Design in `docs/gist-sync-plan.md`. The facts that hold it up:
   index write and get its entry overwritten. The gist read and the PATCH happen outside it.
 - **The PATCH is check-then-write.** A 304 on the re-read means nobody moved the gist; a 200 means
   merge again. A second 200 gives up until the next trigger. Stale writes cost a re-push or a conflict
-  copy, never an edit, because rows 6 and 9 of the merge table handle a rolled-back remote.
+  copy, never an edit, because rows 6 and 9 of the table above `mergeSavedTheme` handle a rolled-back
+  remote.
 - **Anything handed to another API is data.** Index entries and documents from the gist are validated
   in `theme-sync.ts` before the merge sees them, and file names must be `<uuid>.json`. The token only
   goes to GitHub hosts.

@@ -88,6 +88,9 @@ const fontStyleNamesByRuleIndex = new Map<number, Set<FontStyleName>>();
 const rawFontStyleByRuleIndex = new Map<number, string | null>();
 const foregroundByRuleIndex = new Map<number, string | null>();
 
+// What a rule had before the buttons touched it. Turning every button off puts that back.
+const fontStyleBeforeEditsByRuleIndex = new Map<number, string | null>();
+
 const ruleColorChangeSender = createThrottledSender<number, string>((ruleIndex, foreground) => {
   panelCallbacks?.changeTokenColorRule(ruleIndex, { foreground });
 });
@@ -263,6 +266,7 @@ function getRuleStructure(tokenColorRules: TokenColorRuleView[]): string {
 function buildRuleRows(tokenColorRules: TokenColorRuleView[]): void {
   ruleRows.length = 0;
   ruleRowByRuleIndex.clear();
+  fontStyleBeforeEditsByRuleIndex.clear();
 
   const ruleFragment = document.createDocumentFragment();
 
@@ -472,13 +476,18 @@ function toggleFontStyle(fontStyleButton: HTMLButtonElement): void {
 
   const rawFontStyle = rawFontStyleByRuleIndex.get(ruleIndex) ?? null;
 
+  if (!fontStyleBeforeEditsByRuleIndex.has(ruleIndex)) {
+    fontStyleBeforeEditsByRuleIndex.set(ruleIndex, rawFontStyle);
+  }
+
   // Keep the constant's order, or the written value shuffles on every toggle.
   const orderedFontStyleNames = FONT_STYLE_NAMES.filter(fontStyleName => activeFontStyleNames.has(fontStyleName));
   const fontStyleWords = [...orderedFontStyleNames, ...getFontStyleWordsWithNoButton(rawFontStyle)];
 
-  // An empty string turns bold back off. Clearing the property would let the parent rule's style come back.
-  const isHadFontStyle = rawFontStyle !== null;
-  const emptyFontStyle = isHadFontStyle ? "" : null;
+  // A rule that never had a style goes back to inheriting one. A rule that had one gets "", which is how a theme
+  // turns a style off.
+  const hasFontStyleBeforeEdits = fontStyleBeforeEditsByRuleIndex.get(ruleIndex) !== null;
+  const emptyFontStyle = hasFontStyleBeforeEdits ? "" : null;
   const fontStyle = fontStyleWords.length === 0 ? emptyFontStyle : fontStyleWords.join(" ");
 
   rawFontStyleByRuleIndex.set(ruleIndex, fontStyle);
@@ -568,9 +577,11 @@ function showInspectionScopes(scopes: string[]): void {
   inspectorScopeListElement.hidden = innermostScope === "";
 }
 
+// Offered even when a rule already matches. That rule usually covers many scopes, and a rule of the token's own is the
+// only way to change this token alone.
 function showCreateRuleOffer(inspection: TokenInspectionView): void {
   const mostSpecificScope = inspection.scopes.at(-1) ?? "";
-  const canCreateRule = inspection.winningRuleIndex === null && mostSpecificScope !== "";
+  const canCreateRule = mostSpecificScope !== "";
 
   scopeForNewRule = canCreateRule ? mostSpecificScope : "";
   inspectorCreateRuleRow.hidden = !canCreateRule;
@@ -579,7 +590,7 @@ function showCreateRuleOffer(inspection: TokenInspectionView): void {
     const hasReadableTokenColor = inspection.foreground !== null && HEX_COLOR_PATTERN.test(inspection.foreground);
 
     inspectorCreateRuleButton.textContent = `Color ${getPlainEnglishScopeLabel(mostSpecificScope)}`;
-    inspectorCreateRuleButton.title = `Adds a rule for ${mostSpecificScope}`;
+    inspectorCreateRuleButton.title = `Adds a rule for ${mostSpecificScope} only`;
     inspectorCreateRuleColorInput.value = hasReadableTokenColor ? getSwatchValue(inspection.foreground) : FALLBACK_NEW_RULE_COLOR;
   }
 }
