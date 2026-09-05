@@ -5,59 +5,78 @@ Mix, tweak and live-preview VS Code color themes from the sidebar.
 You like one theme's syntax colors and another one's editor chrome. This lets you take each part from
 wherever you want, tweak whatever still bothers you, and export the result as a real theme.
 
-## What it does
+## Mix from installed themes
 
-**Mix from installed themes.** Take a whole theme as a starting point, then take individual parts —
-terminal, tabs, git colors, code colors — from other themes. Each picker previews live as you move
-through the list, so you see the result before committing. Enter keeps it, Escape puts it back.
+Take a whole theme as a starting point, then take individual parts from other themes: the terminal,
+the tabs, the git colors, the code colors. Each picker previews live as you move through the list, so
+you see the result before committing. Enter keeps it, Escape puts it back.
 
-A category taken from somewhere else is pinned. Taking a new whole theme leaves it alone, and the ×
-next to it puts it back whenever you want.
+Taking a part from another theme pins it. Taking a new whole theme leaves it alone, and the × next to
+it puts it back whenever you want.
 
-**Edit any color.** All 982 workbench color ids, grouped into eleven browsable sections with search.
-Every row has a color picker, a hex field, and a flash button that blinks the color so you can find
-what it actually paints.
+## Edit any color
 
-**Adjust colors.** Brightness, contrast and saturation sliders for the whole theme or for one part of
-it — the terminal, the tabs, the code colors. They sit on top of whatever the colors are, borrowed or
-hand-picked, and are saved with the theme. Dragging a slider back to the middle undoes it.
+All 982 workbench color ids, grouped into eleven browsable sections with search. Every row has a
+color picker, a hex field, and a flash button that blinks the color so you can find what it actually
+paints.
 
-**Edit the code colors.** The syntax panel lists the theme's token rules in plain English — function
-name, string, comment — rather than raw TextMate scopes. Turn on _Follow my cursor_, put the caret on
-a token, and it tells you which rule colors it, offering to create one when nothing matches. It also
-warns you when a language server is painting the token instead, which is the case where editing a
-rule looks broken but isn't.
+## Adjust colors
 
-**Save and discard.** Edits paint immediately but are not permanent. Save keeps them, Discard puts the
-last saved version back.
+Brightness, contrast and saturation sliders for the whole theme or for one part of it, such as the
+terminal, the tabs or the code colors. They sit on top of whatever the colors are, borrowed or hand
+picked, and are saved with the theme. Dragging a slider back to the middle undoes it.
 
-**Export.** Writes your theme out as a standalone theme extension — its own `package.json`, its own
-theme file, ready for `vsce package`. The result does not need this extension.
+## Edit the code colors
 
-**Sync.** Off by default. Turn it on and your saved themes live in one secret gist on the GitHub
-account VS Code already knows, and every machine with sync on keeps the same set.
+The syntax panel lists the theme's token rules in plain English (function name, string, comment)
+rather than raw TextMate scopes. Turn on _Follow my cursor_, put the caret on a token, and it tells
+you which rule colors it. When nothing matches, it offers to create a rule. It also warns you when a
+language server is painting the token instead, which is the case where editing a rule looks broken
+but isn't.
+
+## Save and discard
+
+Edits paint immediately but are not permanent. Save keeps them, Discard puts the last saved version
+back.
+
+## Export and install
+
+Your theme leaves the editor as a real theme that does not need this extension:
+
+- **Install into VS Code** packages it and installs it as an extension of its own, ready to pick from
+  the theme list.
+- **As extension** writes a folder with its own `package.json` and theme file, ready to publish.
+- **As .vsix** builds the installable package, the same thing `vsce package` makes.
+- **As JSON file** saves one plain theme file, the format every VS Code theme uses.
 
 ## Sync
+
+Off by default. Turn it on and your saved themes live in one secret gist on the GitHub account VS Code
+already knows, and every machine with sync on keeps the same set.
 
 The Sync section of the panel creates a secret gist named `vscode-theme-editor:themes` and keeps your
 saved themes in it as JSON files. Nothing else on your account is read or changed, and no network
 request happens until you press the button.
 
-- **Secret is not private.** A secret gist is not listed on your profile, but anyone who has its link
-  can read it. Do not put a theme you would not share into a synced editor.
-- **Stop is per machine.** Stopping sync on one machine leaves the gist and every other machine
-  alone. "Stop and delete the gist" removes it; other machines then start a fresh gist from their own
-  copies.
-- **Edits and deletes merge.** Two machines editing the same theme keep both versions: the later edit
-  keeps the name, the other comes back as `<name> (conflict)`. An edit made while another machine
-  deleted the theme keeps the edit. Nothing is dropped without a copy.
-- **Editing during a pull.** A theme changed or deleted on another machine while you are editing it
-  stays on screen. Save asks whether to keep yours, theirs, or both.
-- **Deleted themes are remembered for 30 days.** That is how a delete reaches a machine that was off.
-  The 30 days count from the deleting machine's clock. A clock far behind lets an offline machine
-  bring the theme back; a clock far ahead keeps the note around a little longer. Neither loses data.
-- **Limits.** Up to 290 themes per gist. Signed out, rate limited, or offline, sync pauses and
-  editing carries on; it resumes on the next save or sign-in.
+A secret gist is not private. It does not show on your profile, but anyone who has its link can read
+it. Do not put a theme you would not share into a synced editor.
+
+Stopping sync on one machine leaves the gist and every other machine alone. "Stop and delete the
+gist" removes it, and other machines then start a fresh gist from their own copies.
+
+Two machines editing the same theme keep both versions. The later edit keeps the name, the other
+comes back as `<name> (conflict)`. An edit made while another machine deleted the theme keeps the
+edit. Nothing goes away without a copy.
+
+A theme changed or deleted on another machine while you are editing it stays on screen. Save asks
+whether to keep yours, theirs, or both.
+
+Deleted themes are remembered for 30 days, which is how a delete reaches a machine that was off. The
+30 days count from the deleting machine's clock. A clock far behind lets an offline machine bring the
+theme back, and a clock far ahead keeps the note around a little longer. Neither loses data.
+
+A gist holds up to 290 themes. Signed out, rate limited, or offline, sync pauses and editing carries
+on. It resumes on the next save or sign-in.
 
 ## Using it
 
