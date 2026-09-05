@@ -1,0 +1,15 @@
+.vscode/**
+.git/**
+docs/**
+node_modules/**
+src/**
+webview/**
+scripts/**
+**/*.ts
+**/*.map
+eslint.config.mjs
+tsdown.config.ts
+tsconfig.json
+.prettierrc
+.gitignore
+CLAUDE.md

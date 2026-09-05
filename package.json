@@ -1,0 +1,112 @@
+{
+  "name": "vscode-theme-editor",
+  "displayName": "Theme Editor",
+  "description": "Mix, tweak and live-preview VS Code color themes",
+  "version": "0.0.1",
+  "author": "Ahmed ALABSI",
+  "publisher": "plant",
+  "icon": "icons/icon.png",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.mjs",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "browserslist": [
+    "chrome >= 128",
+    "node >= 20"
+  ],
+  "categories": [
+    "Themes",
+    "Other"
+  ],
+  "keywords": [
+    "theme",
+    "color",
+    "editor",
+    "syntax",
+    "customization"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "themeEditor",
+          "title": "Theme Editor",
+          "icon": "icons/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "themeEditor": [
+        {
+          "id": "themeEditor.panel",
+          "name": "Theme Editor",
+          "type": "webview"
+        }
+      ]
+    },
+    "themes": [
+      {
+        "id": "Theme Editor (Dark)",
+        "label": "Theme Editor (Dark)",
+        "uiTheme": "vs-dark",
+        "path": "./themes/generated-dark.json",
+        "_watch": true
+      },
+      {
+        "id": "Theme Editor (Light)",
+        "label": "Theme Editor (Light)",
+        "uiTheme": "vs",
+        "path": "./themes/generated-light.json",
+        "_watch": true
+      }
+    ],
+    "commands": [
+      {
+        "command": "themeEditor.open",
+        "title": "Theme Editor: Open"
+      },
+      {
+        "command": "themeEditor.exportTheme",
+        "title": "Theme Editor: Export Theme As Extension"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsdown",
+    "watch": "tsdown -w",
+    "lint": "eslint --config ./eslint.config.mjs --fix",
+    "package": "vsce package --no-dependencies",
+    "prepack": "npm run build",
+    "vscode:prepublish": "npm run build",
+    "vscode:publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@eslint/markdown": "^8.0.3",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^26.1.2",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.9.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-compat": "^7.0.2",
+    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-unicorn": "^69.0.0",
+    "fflate": "^0.8.3",
+    "globals": "^17.8.0",
+    "jsonc-parser": "^3.3.1",
+    "prettier": "^3.9.6",
+    "prettier-plugin-jsdoc": "^1.8.1",
+    "tsdown": "^0.22.14",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.0"
+  }
+}

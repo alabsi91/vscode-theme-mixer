@@ -1,0 +1,512 @@
+/* Every color comes from a --vscode-* custom property. VS Code writes those onto :root itself. */
+
+/* Most themes paint panel-border nearly invisible. A divider mixed down from the icon color shows in all of them. */
+:root {
+  --theme-editor-divider: color-mix(in srgb, var(--vscode-icon-foreground, var(--vscode-foreground)) 35%, transparent);
+
+  --marker-size: 11px;
+
+  /* One tree level: the marker's width plus its gap, so a child's marker sits under its parent's title. */
+  --tree-indent: calc(var(--marker-size) + 6px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Any display rule below would beat the browser's own rule for `hidden`. Rows are toggled through it. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 0 0 12px;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+}
+
+/* ------------------------------------------------------------------ sections */
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--theme-editor-divider);
+}
+
+/* A collapsible section is one row while closed. Same room above and below its title. */
+details.panel-section {
+  padding: 8px 10px;
+}
+
+/* A closed details still lays out an empty content box, and the column gap would land under the title. */
+details.panel-section:not([open]) {
+  gap: 0;
+}
+
+/* Every section starts with one of these. They are what makes the panel readable at a glance. */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 -10px;
+  padding: 4px 10px;
+  background: var(--vscode-sideBarSectionHeader-background);
+  color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Every summary draws the same marker, so section headers, adjust rows and color categories line up.
+   The default triangle is dropped. The marker has a fixed width so the title does not shift on toggle. */
+details > .section-header,
+.adjust-row-summary,
+.category-summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+details > .section-header::-webkit-details-marker,
+.adjust-row-summary::-webkit-details-marker,
+.category-summary::-webkit-details-marker {
+  display: none;
+}
+
+details > .section-header::before,
+.adjust-row-summary::before,
+.category-summary::before {
+  content: "▸";
+  flex: none;
+  width: var(--marker-size);
+  font-size: var(--marker-size);
+  text-align: center;
+}
+
+details[open] > .section-header::before,
+details[open] > .adjust-row-summary::before,
+details[open] > .category-summary::before {
+  content: "▾";
+}
+
+
+/* Stays at the top while the panel scrolls. A dirty theme is never out of sight. */
+.save-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--theme-editor-divider);
+  background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+  box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+}
+
+/* Same bar, in warning colors. Shown while the window is on some other theme and edits cannot be seen. */
+.notice-bar {
+  border-bottom-color: var(--vscode-inputValidation-warningBorder, var(--theme-editor-divider));
+  background: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
+}
+
+.notice-bar > .save-bar-text {
+  font-weight: normal;
+}
+
+.save-bar-text {
+  flex: 1;
+  font-weight: 600;
+}
+
+.save-bar-primary {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.save-bar-primary:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.theme-row {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-row > select {
+  flex: 1;
+  min-width: 0;
+}
+
+.button-row,
+.name-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.button-row > button {
+  flex: 1 1 auto;
+}
+
+/* The search is a child of the Colors header, one level in like every other row, with room on both sides. */
+.colors-section > input[type="search"] {
+  width: calc(100% - var(--tree-indent));
+  margin: 2px 0 4px var(--tree-indent);
+}
+
+/* The accordions sit inside the Colors section. They bleed back out to the panel edge so their rows
+   line up with every other section instead of being indented twice. */
+.accordion-list {
+  margin: 0 -10px -8px;
+}
+
+.accordion-list > * > .category:first-child {
+  border-top: 1px solid var(--theme-editor-divider);
+}
+
+.take-row-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Name on the left, the source underneath it when it matters, buttons on the right. */
+/* Rows are children of their section header, one tree level in. */
+.take-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 0 2px var(--tree-indent);
+}
+
+.take-row + .take-row {
+  border-top: 1px solid var(--theme-editor-divider);
+}
+
+.take-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.take-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The whole theme is the starting point. It reads louder and sits apart from the parts. */
+.take-row-whole,
+.adjust-row-whole {
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--theme-editor-divider);
+}
+
+.take-row-whole .take-row-name,
+.adjust-row-whole .take-row-name {
+  font-weight: 600;
+}
+
+.take-pick {
+  flex: none;
+  padding: 2px 10px;
+}
+
+.take-restore {
+  flex: 0 0 auto;
+  padding: 0 8px;
+}
+
+.taken-from {
+  padding-left: 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name-row > input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ adjust colors */
+
+.adjust-row-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.adjust-row + .adjust-row {
+  border-top: 1px solid var(--theme-editor-divider);
+}
+
+.adjust-row-summary > .take-row-name {
+  flex: 1;
+}
+
+/* Shown while any slider of the row is off center. */
+.adjust-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--vscode-progressBar-background, var(--vscode-focusBorder));
+}
+
+.adjust-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0 8px calc(2 * var(--tree-indent));
+}
+
+/* Label left, value right, the range underneath across the full width. */
+.adjust-slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+}
+
+.adjust-slider-value {
+  font-family: var(--vscode-editor-font-family), monospace;
+}
+
+.adjust-slider > input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--vscode-progressBar-background);
+}
+
+.adjust-reset {
+  align-self: flex-end;
+  padding: 2px 10px;
+}
+
+/* ------------------------------------------------------------------ controls */
+
+button {
+  padding: 3px 8px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.wide-button {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.wide-button:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+select {
+  width: 100%;
+  padding: 3px 4px;
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 2px;
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input[type="text"],
+input[type="search"] {
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+/* ------------------------------------------------------------------ base switch */
+
+.base-switch {
+  display: flex;
+  gap: 0;
+}
+
+.base-option {
+  flex: 1;
+  border-radius: 0;
+}
+
+.base-option:first-child {
+  border-radius: 2px 0 0 2px;
+}
+
+.base-option:last-child {
+  border-radius: 0 2px 2px 0;
+}
+
+.base-option.is-selected {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.base-option.is-selected:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+/* ------------------------------------------------------------------ apply failure */
+
+.apply-failure {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+  color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+  background: var(--vscode-inputValidation-errorBackground);
+  word-break: break-word;
+}
+
+/* ------------------------------------------------------------------ sync */
+
+.sync-status {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  word-break: break-word;
+}
+
+.sync-status.is-error {
+  color: var(--vscode-errorForeground, var(--vscode-foreground));
+}
+
+/* ------------------------------------------------------------------ categories */
+
+.category {
+  border-bottom: 1px solid var(--theme-editor-divider);
+}
+
+.category-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 10px 2px calc(10px + var(--tree-indent));
+  font-weight: 600;
+}
+
+.category-summary:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.color-row {
+  padding: 5px 10px 6px calc(10px + 2 * var(--tree-indent));
+}
+
+.color-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.color-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* A color input paints its swatch inside its own padding. Take the padding away and it fills. */
+.color-swatch {
+  flex: none;
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--vscode-input-border, var(--theme-editor-divider));
+  border-radius: 2px;
+  background: none;
+  cursor: pointer;
+}
+
+/* The color after the adjustment sliders. Only shown when a slider moved it. */
+.color-swatch-adjusted {
+  flex: none;
+  width: 12px;
+  height: 22px;
+  border: 1px solid var(--vscode-input-border, var(--theme-editor-divider));
+  border-radius: 2px;
+}
+
+.color-hex {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--vscode-editor-font-family), monospace;
+}
+
+.clear-button,
+.flash-button {
+  flex: none;
+  width: 22px;
+  padding: 0;
+  line-height: 1;
+}
+
+.flash-button {
+  font-size: 10px;
+}
+
+.color-row-id {
+  margin-top: 3px;
+  word-break: break-all;
+}
+
+/* A key that the theme does not set is showing its default. Dim it to say so. */
+.color-row:not(.is-set) .color-row-id {
+  color: var(--vscode-descriptionForeground);
+}
+
+.color-row-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* High contrast themes carry two class names. The attribute is the only reliable branch. */
+body[data-vscode-theme-kind^="vscode-high-contrast"] button,
+body[data-vscode-theme-kind^="vscode-high-contrast"] select,
+body[data-vscode-theme-kind^="vscode-high-contrast"] input[type="text"],
+body[data-vscode-theme-kind^="vscode-high-contrast"] input[type="search"],
+body[data-vscode-theme-kind^="vscode-high-contrast"] .color-swatch-adjusted {
+  border-color: var(--vscode-contrastBorder);
+}

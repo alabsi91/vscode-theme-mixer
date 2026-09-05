@@ -1,0 +1,21 @@
+# build
+lib/
+dist/
+
+# node
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# typescript
+tsconfig.tsbuildinfo
+
+# OSX
+.DS_Store
+
+# Archives
+*.tgz
+*.zip
+*.tar.gz
+*.vsix

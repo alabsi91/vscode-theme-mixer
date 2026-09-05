@@ -1,0 +1,198 @@
+/*
+  The syntax editing panel. Every color comes from a --vscode-* custom property.
+
+  Nothing here references a property with two or more dots in its id. VS Code only converts the first dot, and the escaped
+  result parses differently from what you would expect.
+*/
+
+.syntax-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ inspector */
+
+.syntax-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 8px calc(10px + 2 * var(--tree-indent));
+  border-bottom: 1px solid var(--theme-editor-divider);
+}
+
+.syntax-follow-cursor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.syntax-inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.syntax-inspected-token {
+  padding: 4px 6px;
+  border: 1px solid var(--theme-editor-divider);
+  border-radius: 2px;
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family), monospace;
+  font-size: var(--vscode-editor-font-size);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.syntax-inspector-verdict {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
+}
+
+.syntax-semantic-warning {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder);
+  border-radius: 2px;
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+  background: var(--vscode-inputValidation-warningBackground);
+  line-height: 1.4;
+}
+
+.syntax-scope {
+  padding: 1px 0 1px 8px;
+  border-left: 2px solid var(--theme-editor-divider);
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family), monospace;
+  word-break: break-all;
+}
+
+.syntax-create-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.syntax-create-rule-button {
+  flex: 1;
+  min-width: 0;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.syntax-create-rule-button:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+/* ------------------------------------------------------------------ filter */
+
+.syntax-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 8px calc(10px + 2 * var(--tree-indent));
+  border-bottom: 1px solid var(--theme-editor-divider);
+}
+
+.syntax-filter {
+  flex: 1;
+  min-width: 0;
+}
+
+.syntax-rule-count {
+  flex: none;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ rules */
+
+.syntax-rule {
+  padding: 5px 10px 6px calc(10px + 2 * var(--tree-indent));
+  border-bottom: 1px solid var(--theme-editor-divider);
+}
+
+.syntax-rule:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+/* The rule that paints the token under the cursor. */
+.syntax-rule.is-winning-rule {
+  background: var(--vscode-list-activeSelectionBackground);
+  box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
+}
+
+.syntax-rule-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* A color input paints its swatch inside its own padding. Take the padding away and it fills. */
+.syntax-swatch {
+  flex: none;
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--vscode-input-border, var(--theme-editor-divider));
+  border-radius: 2px;
+  background: none;
+  cursor: pointer;
+}
+
+.syntax-rule-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.syntax-font-styles {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.syntax-font-style {
+  width: 20px;
+  padding: 0;
+  line-height: 1.6;
+}
+
+.syntax-font-style.is-active {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.syntax-font-style.is-active:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.syntax-font-style-bold {
+  font-weight: bold;
+}
+
+.syntax-font-style-italic {
+  font-style: italic;
+}
+
+.syntax-font-style-underline {
+  text-decoration: underline;
+}
+
+.syntax-delete-rule {
+  flex: none;
+  width: 22px;
+  padding: 0;
+  line-height: 1;
+}
+
+/* High contrast themes carry two class names. The attribute is the only reliable branch. */
+body[data-vscode-theme-kind^="vscode-high-contrast"] .syntax-swatch,
+body[data-vscode-theme-kind^="vscode-high-contrast"] .syntax-inspected-token {
+  border-color: var(--vscode-contrastBorder);
+}
