@@ -204,6 +204,7 @@ function buildInspector(): HTMLElement {
 
   const followCursorLabel = document.createElement("label");
   followCursorLabel.className = "syntax-follow-cursor";
+  followCursorLabel.title = "Shows which rule colors the word under your cursor in the editor";
 
   followCursorCheckbox = document.createElement("input");
   followCursorCheckbox.type = "checkbox";
@@ -219,6 +220,7 @@ function buildInspector(): HTMLElement {
 
   inspectorTokenElement = document.createElement("div");
   inspectorTokenElement.className = "syntax-inspected-token";
+  inspectorTokenElement.title = "The word under your cursor, in the color the theme gives it";
 
   inspectorSemanticWarningElement = document.createElement("p");
   inspectorSemanticWarningElement.className = "syntax-semantic-warning";
@@ -237,6 +239,7 @@ function buildInspector(): HTMLElement {
   inspectorCreateRuleColorInput = document.createElement("input");
   inspectorCreateRuleColorInput.type = "color";
   inspectorCreateRuleColorInput.className = "syntax-swatch";
+  inspectorCreateRuleColorInput.title = "The color the new rule starts with";
 
   inspectorCreateRuleButton = document.createElement("button");
   inspectorCreateRuleButton.type = "button";
