@@ -1,4 +1,4 @@
-# Theme Editor — working notes
+# Theme Mixer — working notes
 
 A VS Code extension that mixes, edits and exports color themes. TypeScript, ESM, bundled with tsdown.
 
@@ -14,7 +14,7 @@ npx vsce package --no-dependencies --allow-missing-repository
 
 ## How a theme actually gets applied
 
-The extension contributes two **real** themes in `package.json` — `Theme Editor (Dark)` and
+The extension contributes two **real** themes in `package.json` — `Theme Mixer (Dark)` and
 `(Light)` — and rewrites their JSON files on disk. VS Code's watcher notices the write and repaints
 with no window reload. Nothing goes through `workbench.colorCustomizations`.
 

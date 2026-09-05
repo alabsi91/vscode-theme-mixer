@@ -443,7 +443,7 @@ async function readWritableThemeIndex(context: vscode.ExtensionContext): Promise
   const index = await readThemeIndex(context);
 
   if (index.version > THEME_INDEX_VERSION) {
-    throw new Error("themes/index.json was written by a newer Theme Editor");
+    throw new Error("themes/index.json was written by a newer Theme Mixer");
   }
 
   return index;

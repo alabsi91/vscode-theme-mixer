@@ -1,4 +1,4 @@
-# Theme Editor
+# Theme Mixer
 
 Mix, tweak and live-preview VS Code color themes from the sidebar.
 
@@ -80,7 +80,7 @@ on. It resumes on the next save or sign-in.
 
 ## Using it
 
-Open the Theme Editor icon in the activity bar. Pick Dark or Light, take a whole theme to start from,
+Open the Theme Mixer icon in the activity bar. Pick Dark or Light, take a whole theme to start from,
 then take the parts you want from elsewhere and tweak.
 
 Nothing switches your theme for you. While your window is on some other theme, the panel shows a bar

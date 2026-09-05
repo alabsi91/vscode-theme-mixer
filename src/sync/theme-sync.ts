@@ -57,7 +57,7 @@ const MAXIMUM_GIST_FILE_BYTES = 10 * 1024 * 1024;
 const WRITE_COALESCE_MILLISECONDS = 2000;
 
 const ENABLE_SYNC_MESSAGE =
-  'Theme Editor will create a secret gist named "vscode-theme-editor:themes" on your GitHub account and keep your saved ' +
+  'Theme Mixer will create a secret gist named "vscode-theme-editor:themes" on your GitHub account and keep your saved ' +
   "themes in it as JSON files.";
 
 const ENABLE_SYNC_DETAIL =
@@ -243,10 +243,10 @@ export async function disableSync(context: vscode.ExtensionContext): Promise<voi
     const result = await deleteGist(session.accessToken, gistId);
 
     if (!result.ok) {
-      void vscode.window.showWarningMessage(`Theme Editor: the gist was not deleted. ${result.message}`);
+      void vscode.window.showWarningMessage(`Theme Mixer: the gist was not deleted. ${result.message}`);
     }
   } else if (gistId) {
-    void vscode.window.showWarningMessage("Theme Editor: not signed in to GitHub, so the gist was not deleted.");
+    void vscode.window.showWarningMessage("Theme Mixer: not signed in to GitHub, so the gist was not deleted.");
   }
 
   await context.globalState.update(SYNC_GIST_ID_STATE_KEY, undefined);
@@ -332,7 +332,7 @@ async function checkSyncedThemeCount(context: vscode.ExtensionContext): Promise<
   }
 
   if (localIndex.version > THEME_INDEX_VERSION) {
-    return { status: "error", message: "themes/index.json was written by a newer Theme Editor" };
+    return { status: "error", message: "themes/index.json was written by a newer Theme Mixer" };
   }
 
   // Tombstones have no file. They do not count against the gist's file limit.
@@ -386,7 +386,7 @@ async function mergeAndApply(
     return await runStorageOperation(mergeAndApplyInsideChain, { isSilent: true });
   } catch (error) {
     if (error instanceof UnsupportedIndexVersionError) {
-      const message = "Update Theme Editor to keep syncing. The gist was written by a newer version.";
+      const message = "Update Theme Mixer to keep syncing. The gist was written by a newer version.";
       return { ok: false, outcome: { status: "paused", message } };
     }
 

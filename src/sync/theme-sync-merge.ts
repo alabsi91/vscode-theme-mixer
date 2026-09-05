@@ -56,7 +56,7 @@ export interface SyncPlan {
 
 export class UnsupportedIndexVersionError extends Error {
   constructor(version: number) {
-    super(`The index was written by a newer Theme Editor (version ${version}).`);
+    super(`The index was written by a newer Theme Mixer (version ${version}).`);
     this.name = "UnsupportedIndexVersionError";
   }
 }

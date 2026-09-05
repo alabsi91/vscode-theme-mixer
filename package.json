@@ -1,6 +1,6 @@
 {
   "name": "vscode-theme-editor",
-  "displayName": "Theme Editor",
+  "displayName": "Theme Mixer",
   "description": "Mix, tweak and live-preview VS Code color themes",
   "version": "0.1.0",
   "author": "Ahmed ALABSI",
@@ -46,7 +46,7 @@
       "activitybar": [
         {
           "id": "themeEditor",
-          "title": "Theme Editor",
+          "title": "Theme Mixer",
           "icon": "icons/logo.svg"
         }
       ]
@@ -55,7 +55,7 @@
       "themeEditor": [
         {
           "id": "themeEditor.panel",
-          "name": "Theme Editor",
+          "name": "Theme Mixer",
           "type": "webview",
           "icon": "icons/logo.svg"
         }
@@ -63,15 +63,15 @@
     },
     "themes": [
       {
-        "id": "Theme Editor (Dark)",
-        "label": "Theme Editor (Dark)",
+        "id": "Theme Mixer (Dark)",
+        "label": "Theme Mixer (Dark)",
         "uiTheme": "vs-dark",
         "path": "./themes/generated-dark.json",
         "_watch": true
       },
       {
-        "id": "Theme Editor (Light)",
-        "label": "Theme Editor (Light)",
+        "id": "Theme Mixer (Light)",
+        "label": "Theme Mixer (Light)",
         "uiTheme": "vs",
         "path": "./themes/generated-light.json",
         "_watch": true
@@ -80,11 +80,11 @@
     "commands": [
       {
         "command": "themeEditor.open",
-        "title": "Theme Editor: Open"
+        "title": "Theme Mixer: Open"
       },
       {
         "command": "themeEditor.exportTheme",
-        "title": "Theme Editor: Export Theme As Extension"
+        "title": "Theme Mixer: Export Theme As Extension"
       }
     ]
   },

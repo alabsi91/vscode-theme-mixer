@@ -34,7 +34,7 @@ export async function pickThemeWithLivePreview(
   const pickItems = await createThemePickItems(base, countSourceColors);
 
   if (pickItems.length === 0) {
-    void vscode.window.showInformationMessage("Theme Editor: no other installed theme offers colors here.");
+    void vscode.window.showInformationMessage("Theme Mixer: no other installed theme offers colors here.");
     return undefined;
   }
 
@@ -86,7 +86,7 @@ async function createThemePickItems(base: ThemeBaseKind, countSourceColors: Coun
   const installedColorThemes = await listInstalledColorThemes();
 
   const loadedThemes = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Window, title: "Theme Editor: reading installed themes" },
+    { location: vscode.ProgressLocation.Window, title: "Theme Mixer: reading installed themes" },
     () => Promise.all(installedColorThemes.map(installedTheme => loadThemeForPicking(installedTheme)))
   );
 

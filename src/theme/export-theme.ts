@@ -106,7 +106,7 @@ export async function installThemeAsExtension(
     const showResult = await showTheme(extensionFiles.extensionName);
 
     if (!showResult.isApplied) {
-      void vscode.window.showWarningMessage(`Theme Editor: ${showResult.message}`);
+      void vscode.window.showWarningMessage(`Theme Mixer: ${showResult.message}`);
     }
   }
 }

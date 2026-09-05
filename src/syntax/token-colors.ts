@@ -40,7 +40,7 @@ export function setTokenColorRule(theme: ColorThemeDocument, ruleIndex: number, 
 /** A later rule beats an earlier one of the same specificity. Appending is what makes the new rule win. */
 export function appendTokenColorRule(theme: ColorThemeDocument, scope: string, foreground: string): void {
   theme.tokenColors.push({
-    name: `Theme Editor: ${scope}`,
+    name: `Theme Mixer: ${scope}`,
     scope,
     settings: { foreground },
   } satisfies TokenColorEntry);

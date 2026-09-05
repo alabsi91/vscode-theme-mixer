@@ -18,8 +18,8 @@ export interface ColorThemeDocument {
 export type ThemeBaseKind = "dark" | "light";
 
 export const CONTRIBUTED_THEME_IDS: Record<ThemeBaseKind, string> = {
-  dark: "Theme Editor (Dark)",
-  light: "Theme Editor (Light)",
+  dark: "Theme Mixer (Dark)",
+  light: "Theme Mixer (Light)",
 };
 
 export type GeneratedThemeWriteFailureReason = "install-directory-not-writable" | "generated-theme-not-written";

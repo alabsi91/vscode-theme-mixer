@@ -73,7 +73,7 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
       const state = await this.host.getEditorState();
       await this.postMessage({ kind: "state", state });
     } catch (error) {
-      void vscode.window.showErrorMessage(`Theme Editor: the panel could not be filled in. ${getErrorMessage(error)}`);
+      void vscode.window.showErrorMessage(`Theme Mixer: the panel could not be filled in. ${getErrorMessage(error)}`);
     }
   }
 
@@ -87,7 +87,7 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
         await this.host.handleWebviewMessage(message);
       }
     } catch (error) {
-      void vscode.window.showErrorMessage(`Theme Editor: ${getErrorMessage(error)}`);
+      void vscode.window.showErrorMessage(`Theme Mixer: ${getErrorMessage(error)}`);
     }
 
     await this.sendState();
@@ -141,7 +141,7 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <link rel="stylesheet" href="${styleUri.toString()}" />
           <link rel="stylesheet" href="${syntaxPanelStyleUri.toString()}" />
-          <title>Theme Editor</title>
+          <title>Theme Mixer</title>
         </head>
         <body>
           <div class="save-bar" id="saveRow" hidden>

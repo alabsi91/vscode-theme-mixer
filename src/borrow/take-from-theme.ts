@@ -121,7 +121,7 @@ export async function restoreTakeTargetFromWholeTheme(
   const installedTheme = installedColorThemes.find(candidate => candidate.settingsId === wholeThemeSource.settingsId);
 
   if (!installedTheme) {
-    void vscode.window.showErrorMessage(`Theme Editor: "${wholeThemeSource.label}" is no longer installed.`);
+    void vscode.window.showErrorMessage(`Theme Mixer: "${wholeThemeSource.label}" is no longer installed.`);
     return;
   }
 
