@@ -2,7 +2,7 @@
   "name": "vscode-theme-editor",
   "displayName": "Theme Editor",
   "description": "Mix, tweak and live-preview VS Code color themes",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Ahmed ALABSI",
   "publisher": "plant",
   "icon": "icons/icon.png",
