@@ -589,8 +589,8 @@ function showCreateRuleOffer(inspection: TokenInspectionView): void {
   if (canCreateRule) {
     const hasReadableTokenColor = inspection.foreground !== null && HEX_COLOR_PATTERN.test(inspection.foreground);
 
-    inspectorCreateRuleButton.textContent = `Color ${getPlainEnglishScopeLabel(mostSpecificScope)}`;
-    inspectorCreateRuleButton.title = `Adds a rule for ${mostSpecificScope} only`;
+    inspectorCreateRuleButton.textContent = "Color this token only";
+    inspectorCreateRuleButton.title = `Adds a rule for ${mostSpecificScope} with this color. Other tokens keep theirs.`;
     inspectorCreateRuleColorInput.value = hasReadableTokenColor ? getSwatchValue(inspection.foreground) : FALLBACK_NEW_RULE_COLOR;
   }
 }
