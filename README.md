@@ -22,17 +22,20 @@ paints.
 
 ## Adjust colors
 
-Brightness, contrast and saturation sliders for the whole theme or for one part of it, such as the
-terminal, the tabs or the code colors. They sit on top of whatever the colors are, borrowed or hand
-picked, and are saved with the theme. Dragging a slider back to the middle undoes it.
+Brightness, contrast, saturation and hue sliders. Tick the parts to adjust, such as the terminal, the
+tabs or the code colors, or leave everything ticked for the whole theme. The sliders show what the
+ticked parts share and change those only, so one part can be tuned on its own and every part at once.
+They sit on top of whatever the colors are, borrowed or hand picked, and are saved with the theme.
+Dragging a slider back to the middle undoes it.
 
 ## Edit the code colors
 
-The syntax panel lists the theme's token rules in plain English (function name, string, comment)
-rather than raw TextMate scopes. Turn on _Follow my cursor_, put the caret on a token, and it tells
-you which rule colors it and offers to give that token a rule of its own. It also warns you when a
-language server is painting the token instead, which is the case where editing a rule looks broken
-but isn't.
+The token rules sit under Colors as _Syntax Highlighting_, named in plain English (function name,
+string, comment) rather than raw TextMate scopes, and the search finds them like any color. The
+_Color under the cursor_ section shows just the rule that paints the token at the caret. Turn on
+_Follow my cursor_, put the caret on a token, and edit that rule right there, or give the token a rule
+of its own. It also warns you when a language server is painting the token instead, which is the
+case where editing a rule looks broken but isn't.
 
 ## Save and discard
 

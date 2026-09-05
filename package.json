@@ -1,8 +1,8 @@
 {
   "name": "vscode-theme-mixer",
-  "displayName": "Theme Mixer",
+  "displayName": "Theme Color Mixer",
   "description": "Mix, tweak and live-preview VS Code color themes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Ahmed ALABSI",
   "publisher": "plant",
   "icon": "icons/icon.png",
@@ -32,11 +32,11 @@
     "Other"
   ],
   "keywords": [
-    "theme",
-    "color",
-    "editor",
-    "syntax",
-    "customization"
+    "color theme",
+    "theme editor",
+    "theme generator",
+    "tokenColors",
+    "colorCustomizations"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -63,15 +63,15 @@
     },
     "themes": [
       {
-        "id": "Theme Mixer (Dark)",
-        "label": "Theme Mixer (Dark)",
+        "id": "Theme Color Mixer (Dark)",
+        "label": "Theme Color Mixer (Dark)",
         "uiTheme": "vs-dark",
         "path": "./themes/generated-dark.json",
         "_watch": true
       },
       {
-        "id": "Theme Mixer (Light)",
-        "label": "Theme Mixer (Light)",
+        "id": "Theme Color Mixer (Light)",
+        "label": "Theme Color Mixer (Light)",
         "uiTheme": "vs",
         "path": "./themes/generated-light.json",
         "_watch": true

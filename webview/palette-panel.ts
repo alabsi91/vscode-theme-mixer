@@ -95,7 +95,7 @@ function buildCategoryCheckboxes(categories: ColorCategoryView[]): void {
     if (category.keys.length === 0) continue;
 
     const labelElement = document.createElement("label");
-    labelElement.className = "palette-category";
+    labelElement.className = "category-tick";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";

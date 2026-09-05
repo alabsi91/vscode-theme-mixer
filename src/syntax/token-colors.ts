@@ -112,16 +112,31 @@ export function setTokenInspectionEnabled(
   const generation = tokenInspectionGeneration;
 
   tokenInspectionListener = vscode.window.onDidChangeTextEditorSelection(event => {
-    clearTimeout(pendingInspectionTimer);
-    pendingInspectionTimer = setTimeout(() => {
-      void reportTokenInspection(context, event.textEditor, getThemeEditorView, generation);
-    }, TOKEN_INSPECTION_DEBOUNCE_MILLISECONDS);
+    scheduleTokenInspection(context, event.textEditor, getThemeEditorView, generation);
   });
+}
 
+/** Reports the token under the cursor again, while the cursor is followed. Every panel message ends with this. */
+export function refreshTokenInspection(
+  context: vscode.ExtensionContext,
+  getThemeEditorView: () => ThemeEditorViewProvider
+): void {
   const activeEditor = vscode.window.activeTextEditor;
-  if (activeEditor) {
-    void reportTokenInspection(context, activeEditor, getThemeEditorView, generation);
-  }
+  if (!tokenInspectionListener || !activeEditor) return;
+
+  scheduleTokenInspection(context, activeEditor, getThemeEditorView, tokenInspectionGeneration);
+}
+
+function scheduleTokenInspection(
+  context: vscode.ExtensionContext,
+  editor: vscode.TextEditor,
+  getThemeEditorView: () => ThemeEditorViewProvider,
+  generation: number
+): void {
+  clearTimeout(pendingInspectionTimer);
+  pendingInspectionTimer = setTimeout(() => {
+    void reportTokenInspection(context, editor, getThemeEditorView, generation);
+  }, TOKEN_INSPECTION_DEBOUNCE_MILLISECONDS);
 }
 
 async function reportTokenInspection(

@@ -5,19 +5,13 @@
   result parses differently from what you would expect.
 */
 
-.syntax-panel {
-  display: flex;
-  flex-direction: column;
-}
-
 /* ------------------------------------------------------------------ inspector */
 
 .syntax-inspector {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 10px 8px calc(10px + 2 * var(--tree-indent));
-  border-bottom: 1px solid var(--theme-editor-divider);
+  margin: 10px 0 0 var(--tree-indent);
 }
 
 .syntax-follow-cursor {
@@ -71,8 +65,13 @@
 
 .syntax-create-rule-row {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.syntax-create-rule-hint {
+  margin: 0;
 }
 
 .syntax-create-rule-button {
@@ -86,41 +85,20 @@
   background: var(--vscode-button-hoverBackground);
 }
 
-/* ------------------------------------------------------------------ filter */
-
-.syntax-filter-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px 8px calc(10px + 2 * var(--tree-indent));
-  border-bottom: 1px solid var(--theme-editor-divider);
-}
-
-.syntax-filter {
-  flex: 1;
-  min-width: 0;
-}
-
-.syntax-rule-count {
-  flex: none;
-  color: var(--vscode-descriptionForeground);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
 /* ------------------------------------------------------------------ rules */
 
-.syntax-rule {
+/* In the Colors list a rule is one row like every color key. In the inspector it stands alone. */
+.syntax-rule-list > .syntax-rule {
   padding: 5px 10px 6px calc(10px + 2 * var(--tree-indent));
   border-bottom: 1px solid var(--theme-editor-divider);
 }
 
-.syntax-rule:hover {
+.syntax-rule-list > .syntax-rule:hover {
   background: var(--vscode-list-hoverBackground);
 }
 
 /* The rule that paints the token under the cursor. */
-.syntax-rule.is-winning-rule {
+.syntax-rule-list > .syntax-rule.is-winning-rule {
   background: var(--vscode-list-activeSelectionBackground);
   box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
 }
@@ -157,10 +135,14 @@
   gap: 2px;
 }
 
-.syntax-font-style {
-  width: 20px;
+/* The style buttons and the delete button are one square each, the height of the swatch beside them. */
+.syntax-font-style,
+.syntax-delete-rule {
+  flex: none;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  line-height: 1.6;
+  line-height: 1;
 }
 
 .syntax-font-style.is-active {
@@ -182,13 +164,6 @@
 
 .syntax-font-style-underline {
   text-decoration: underline;
-}
-
-.syntax-delete-rule {
-  flex: none;
-  width: 22px;
-  padding: 0;
-  line-height: 1;
 }
 
 /* High contrast themes carry two class names. The attribute is the only reliable branch. */

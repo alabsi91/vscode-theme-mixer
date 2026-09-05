@@ -4,7 +4,7 @@
 :root {
   --theme-editor-divider: color-mix(in srgb, var(--vscode-icon-foreground, var(--vscode-foreground)) 35%, transparent);
 
-  --marker-size: 11px;
+  --marker-size: 14px;
 
   /* One tree level: the marker's width plus its gap, so a child's marker sits under its parent's title. */
   --tree-indent: calc(var(--marker-size) + 6px);
@@ -63,10 +63,9 @@ details.panel-section:not([open]) {
   letter-spacing: 0.05em;
 }
 
-/* Every summary draws the same marker, so section headers, adjust rows and color categories line up.
+/* Every summary draws the same marker. Section headers and color categories line up.
    The default triangle is dropped. The marker has a fixed width so the title does not shift on toggle. */
 details > .section-header,
-.adjust-row-summary,
 .category-summary {
   cursor: pointer;
   user-select: none;
@@ -74,13 +73,11 @@ details > .section-header,
 }
 
 details > .section-header::-webkit-details-marker,
-.adjust-row-summary::-webkit-details-marker,
 .category-summary::-webkit-details-marker {
   display: none;
 }
 
 details > .section-header::before,
-.adjust-row-summary::before,
 .category-summary::before {
   content: "▸";
   flex: none;
@@ -90,9 +87,70 @@ details > .section-header::before,
 }
 
 details[open] > .section-header::before,
-details[open] > .adjust-row-summary::before,
 details[open] > .category-summary::before {
   content: "▾";
+}
+
+/* One line under a section header that says what the controls below do. */
+.section-hint {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Children of a section header sit one tree level in, like the rows of the other sections. */
+.section-hint,
+.category-tick-all,
+.category-tick-list,
+.adjust-slider-list,
+.palette-swatch-list {
+  margin-left: var(--tree-indent);
+}
+
+/* The parts of the theme that a section works on. Two columns of checkboxes. */
+.category-tick-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+/* One checkbox for every part, on its own row above the grid. */
+.category-tick-all {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.category-tick-all + .category-tick-list {
+  margin-top: 6px;
+}
+
+.category-tick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+}
+
+.category-tick > input {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--vscode-progressBar-background, var(--vscode-focusBorder));
+}
+
+.category-tick:has(input:checked) {
+  color: var(--vscode-foreground);
 }
 
 
@@ -205,15 +263,13 @@ details[open] > .category-summary::before {
 }
 
 /* The whole theme is the starting point. It reads louder and sits apart from the parts. */
-.take-row-whole,
-.adjust-row-whole {
+.take-row-whole {
   margin-bottom: 4px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--theme-editor-divider);
 }
 
-.take-row-whole .take-row-name,
-.adjust-row-whole .take-row-name {
+.take-row-whole .take-row-name {
   font-weight: 600;
 }
 
@@ -223,8 +279,8 @@ details[open] > .category-summary::before {
 }
 
 .take-restore {
-  flex: 0 0 auto;
-  padding: 0 8px;
+  flex: none;
+  padding: 2px 8px;
 }
 
 .taken-from {
@@ -244,34 +300,28 @@ details[open] > .category-summary::before {
 
 /* ------------------------------------------------------------------ adjust colors */
 
-.adjust-row-list {
+.adjust-slider-list {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
-.adjust-row + .adjust-row {
-  border-top: 1px solid var(--theme-editor-divider);
-}
-
-.adjust-row-summary > .take-row-name {
-  flex: 1;
-}
-
-/* Shown while any slider of the row is off center. */
+/* Shown next to a part while any of its sliders is off center. */
 .adjust-dot {
   flex: none;
   width: 6px;
   height: 6px;
-  margin-right: 4px;
   border-radius: 50%;
   background: var(--vscode-progressBar-background, var(--vscode-focusBorder));
 }
 
-.adjust-row-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 2px 0 8px calc(2 * var(--tree-indent));
+/* The ticked parts disagree. The thumb sits in the middle and the value says so. */
+.adjust-slider.is-mixed > input[type="range"] {
+  opacity: 0.5;
+}
+
+.adjust-slider.is-mixed > .adjust-slider-value {
+  font-style: italic;
 }
 
 /* Label left, value right, the range underneath across the full width. */
@@ -300,46 +350,6 @@ details[open] > .category-summary::before {
 }
 
 /* ------------------------------------------------------------------ palette */
-
-.palette-hint {
-  margin: 0;
-  color: var(--vscode-descriptionForeground);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.palette-category-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 10px;
-  margin: 10px 0 14px;
-}
-
-.palette-category {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--vscode-descriptionForeground);
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  user-select: none;
-}
-
-.palette-category > input {
-  flex: none;
-  width: 15px;
-  height: 15px;
-  margin: 0;
-  accent-color: var(--vscode-progressBar-background, var(--vscode-focusBorder));
-}
-
-.palette-category:has(input:checked) {
-  color: var(--vscode-foreground);
-}
 
 .palette-swatch-list {
   display: flex;
@@ -383,15 +393,6 @@ button:disabled {
   cursor: default;
 }
 
-.wide-button {
-  color: var(--vscode-button-foreground);
-  background: var(--vscode-button-background);
-}
-
-.wide-button:hover:not(:disabled) {
-  background: var(--vscode-button-hoverBackground);
-}
-
 select {
   width: 100%;
   padding: 3px 4px;
@@ -429,6 +430,7 @@ input::placeholder {
 .base-switch {
   display: flex;
   gap: 0;
+  margin-bottom: 6px;
 }
 
 .base-option {

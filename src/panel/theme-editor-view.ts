@@ -53,13 +53,18 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
       if (this.view === webviewView) {
         this.view = null;
       }
+
+      void this.stopFollowingCursor();
     });
 
     // A hidden view drops every message posted to it, without an error.
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible) {
         void this.sendState();
+        return;
       }
+
+      void this.stopFollowingCursor();
     });
 
     webviewView.webview.html = await this.createPageHtml(webviewView.webview);
@@ -75,6 +80,10 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       void vscode.window.showErrorMessage(`Theme Mixer: the panel could not be filled in. ${getErrorMessage(error)}`);
     }
+  }
+
+  private async stopFollowingCursor(): Promise<void> {
+    await this.host.handleWebviewMessage({ kind: "setTokenInspectionEnabled", isEnabled: false });
   }
 
   async showTokenInspection(inspection: TokenInspectionView | null): Promise<void> {
@@ -148,6 +157,7 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
             <span class="save-bar-text">Unsaved changes</span>
             <button type="button" class="save-bar-primary" id="saveThemeButton">Save</button>
             <button type="button" id="discardChangesButton">Discard</button>
+            <button type="button" id="compareThemeButton" title="Hold to see the saved version">Compare</button>
           </div>
 
           <div class="save-bar notice-bar" id="themeNotShowingBar" hidden>
@@ -194,7 +204,6 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
             </div>
             <button
               type="button"
-              class="wide-button"
               id="installThemeButton"
               title="Packages the theme and installs it into this VS Code as an extension of its own"
             >
@@ -229,15 +238,28 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
 
           <details class="panel-section" id="adjustSection">
             <summary class="section-header">Adjust colors</summary>
-            <div class="adjust-row-list" id="adjustWholeThemeRow"></div>
-            <div class="adjust-row-list" id="adjustCategoryList"></div>
+            <p class="section-hint">Tick the parts to adjust. The sliders show and change those only.</p>
+            <label
+              class="category-tick category-tick-all"
+              title="Tick every part. When every part is ticked, untick them all. When none is, go back to the last selection."
+            >
+              <input type="checkbox" id="adjustAllCheckbox" />All parts
+            </label>
+            <div class="category-tick-list" id="adjustCategoryList"></div>
+            <div class="adjust-slider-list" id="adjustSliderList"></div>
           </details>
 
           <details class="panel-section" id="paletteSection">
             <summary class="section-header">Palette</summary>
-            <p class="palette-hint">Pick a new color to change it everywhere it is used.</p>
-            <div class="palette-category-list" id="paletteCategoryList"></div>
+            <p class="section-hint">Pick a new color to change it everywhere it is used.</p>
+            <div class="category-tick-list" id="paletteCategoryList"></div>
             <div class="palette-swatch-list" id="paletteSwatchList"></div>
+          </details>
+
+          <details class="panel-section" id="syntaxInspectorSection">
+            <summary class="section-header">Color under the cursor</summary>
+            <p class="section-hint">Turn on follow, put the cursor on a word in the editor, and edit the rule that colors it.</p>
+            <div class="syntax-inspector" id="syntaxInspector"></div>
           </details>
 
           <details class="panel-section colors-section" id="colorsSection">

@@ -1,10 +1,11 @@
 import { WHOLE_THEME_TAKE_TARGET_ID } from "../src/panel/webview-protocol.ts";
-import { ADJUSTMENT_LIMITS } from "../src/theme/adjust-colors.ts";
+import { ADJUSTMENT_LIMITS, isZeroAdjustment } from "../src/theme/adjust-colors.ts";
 import { HEX_COLOR_PATTERN, expandShorthandHexColor } from "../src/theme/hex-color.ts";
 import { createThrottledSender, getColorWithCurrentAlpha, getSwatchValue } from "./color-input.ts";
 import { initPalettePanel, showPalette } from "./palette-panel.ts";
 import {
   ACCORDION_GROUP_NAME,
+  getSyntaxRuleCategory,
   initSyntaxPanel,
   showTokenColorRules,
   showTokenInspection,
@@ -22,6 +23,7 @@ import type {
 } from "../src/panel/webview-protocol.ts";
 import type { ColorAdjustment } from "../src/theme/adjust-colors.ts";
 import type { ThemeBaseKind } from "../src/theme/generated-theme-file.ts";
+import type { SearchableCategory } from "./syntax-panel.ts";
 
 declare function acquireVsCodeApi(): {
   postMessage(message: WebviewToExtensionMessage): void;
@@ -35,6 +37,8 @@ interface PersistedViewState {
   expandedCategoryIds: string[];
   /** Missing in a state saved before the palette existed. */
   paletteCategoryIds?: string[];
+  /** Missing in a state saved before the sliders had checkboxes. */
+  adjustCategoryIds?: string[];
 }
 
 interface ColorKeyRow {
@@ -46,22 +50,11 @@ interface ColorKeyRow {
   searchText: string;
 }
 
-interface CategorySection {
-  categoryId: string;
-  detailsElement: HTMLDetailsElement;
-  colorKeyRows: ColorKeyRow[];
-}
-
 interface AdjustSlider {
   property: keyof ColorAdjustment;
   labelElement: HTMLLabelElement;
   rangeInput: HTMLInputElement;
   valueElement: HTMLElement;
-}
-
-interface AdjustRow {
-  dotElement: HTMLElement;
-  sliders: AdjustSlider[];
 }
 
 const vscodeApi = acquireVsCodeApi();
@@ -77,8 +70,7 @@ const ADJUSTMENT_SLIDER_LABELS: [property: keyof ColorAdjustment, label: string]
 
 const ZERO_ADJUSTMENT: ColorAdjustment = { brightness: 0, contrast: 0, saturation: 0, hue: 0 };
 
-/** Its own accordion. Opening a slider row must not close a Colors category. */
-const ADJUST_ROW_GROUP_NAME = "themeEditorAdjustRow";
+const ADJUSTMENT_SENDER_KEY = "colorAdjustments";
 
 const baseSwitch = getElementById<HTMLDivElement>("baseSwitch");
 const savedThemeSelect = getElementById<HTMLSelectElement>("savedThemeSelect");
@@ -95,6 +87,7 @@ const themeNotShowingBar = getElementById<HTMLDivElement>("themeNotShowingBar");
 const showEditorThemeButton = getElementById<HTMLButtonElement>("showEditorThemeButton");
 const saveThemeButton = getElementById<HTMLButtonElement>("saveThemeButton");
 const discardChangesButton = getElementById<HTMLButtonElement>("discardChangesButton");
+const compareThemeButton = getElementById<HTMLButtonElement>("compareThemeButton");
 const themeNameRow = getElementById<HTMLDivElement>("themeNameRow");
 const themeNameInput = getElementById<HTMLInputElement>("themeNameInput");
 const themeNameConfirmButton = getElementById<HTMLButtonElement>("themeNameConfirmButton");
@@ -102,8 +95,9 @@ const themeNameCancelButton = getElementById<HTMLButtonElement>("themeNameCancel
 const importWholeThemeButton = getElementById<HTMLButtonElement>("importWholeThemeButton");
 const wholeThemeTakenFrom = getElementById<HTMLSpanElement>("wholeThemeTakenFrom");
 const takeCategoryList = getElementById<HTMLDivElement>("takeCategoryList");
-const adjustWholeThemeRow = getElementById<HTMLDivElement>("adjustWholeThemeRow");
+const adjustAllCheckbox = getElementById<HTMLInputElement>("adjustAllCheckbox");
 const adjustCategoryList = getElementById<HTMLDivElement>("adjustCategoryList");
+const adjustSliderList = getElementById<HTMLDivElement>("adjustSliderList");
 const searchInput = getElementById<HTMLInputElement>("searchInput");
 const applyFailure = getElementById<HTMLParagraphElement>("applyFailure");
 const categoryList = getElementById<HTMLDivElement>("categoryList");
@@ -114,7 +108,7 @@ const syncNowButton = getElementById<HTMLButtonElement>("syncNowButton");
 const disableSyncButton = getElementById<HTMLButtonElement>("disableSyncButton");
 
 const rowsByColorId = new Map<string, ColorKeyRow>();
-const categorySections: CategorySection[] = [];
+const colorCategorySections: SearchableCategory[] = [];
 
 const takenFromElementByCategoryId = new Map<string, { takenFromElement: HTMLElement; restoreButton: HTMLButtonElement }>();
 
@@ -126,14 +120,20 @@ const colorChangeSender = createThrottledSender<string, string | null>((colorId,
   postToExtension({ kind: "setColor", colorId, value });
 });
 
-const adjustRowByTakeTargetId = new Map<string, AdjustRow>();
+const adjustSliders: AdjustSlider[] = [];
+const adjustResetButton = document.createElement("button");
+const adjustPartByTakeTargetId = new Map<string, { checkbox: HTMLInputElement; dotElement: HTMLElement }>();
 
-const adjustmentChangeSender = createThrottledSender<string, ColorAdjustment>((takeTargetId, adjustment) => {
-  postToExtension({ kind: "setColorAdjustment", takeTargetId, adjustment });
+let shownColorAdjustments: Record<string, ColorAdjustment> = {};
+
+const adjustmentChangeSender = createThrottledSender<string, Record<string, ColorAdjustment>>((_key, colorAdjustments) => {
+  postToExtension({ kind: "setColorAdjustments", colorAdjustments });
 });
 
 let expandedCategoryIds = new Set<string>();
 let paletteCategoryIds: string[] | undefined;
+let adjustCategoryIds: string[] | undefined;
+let previousPartialAdjustCategoryIds: string[] | undefined;
 let builtCategoryStructure = "";
 let themeNameMode: "create" | "rename" | null = null;
 let shownSyncState: SyncState = { status: "off" };
@@ -143,13 +143,16 @@ startPage();
 function startPage(): void {
   restorePersistedViewState();
 
-  initSyntaxPanel(getElementById<HTMLDivElement>("syntaxPanel"), {
+  initSyntaxPanel(getElementById<HTMLDivElement>("syntaxPanel"), getElementById<HTMLDivElement>("syntaxInspector"), {
     changeTokenColorRule: (ruleIndex, ruleChanges) => postToExtension({ kind: "setTokenColorRule", ruleIndex, ...ruleChanges }),
     deleteTokenColorRule: ruleIndex => postToExtension({ kind: "deleteTokenColorRule", ruleIndex }),
     createTokenColorRuleForScope: (scope, foreground) =>
       postToExtension({ kind: "createTokenColorRuleForScope", scope, foreground }),
     changeTokenInspectionEnabled: isEnabled => postToExtension({ kind: "setTokenInspectionEnabled", isEnabled }),
+    applyColorsSearch: () => applySearch(),
   });
+
+  getSyntaxRuleCategory().detailsElement.addEventListener("toggle", () => persistViewState());
 
   initPalettePanel(
     getElementById<HTMLDivElement>("paletteCategoryList"),
@@ -165,9 +168,12 @@ function startPage(): void {
     paletteCategoryIds
   );
 
+  buildAdjustSliders();
+
   listenForMessages();
   listenForThemeCommands();
   listenForMixCommands();
+  listenForAdjustEdits();
   listenForSyncCommands();
   listenForSearch();
   listenForColorEdits();
@@ -182,12 +188,13 @@ function restorePersistedViewState(): void {
   searchInput.value = persistedViewState.searchText;
   expandedCategoryIds = new Set(persistedViewState.expandedCategoryIds);
   paletteCategoryIds = persistedViewState.paletteCategoryIds;
+  adjustCategoryIds = persistedViewState.adjustCategoryIds;
 }
 
 function persistViewState(): void {
   // A search opens and closes categories on its own. Only a click should be remembered.
   if (searchInput.value.trim() === "") {
-    const openSections = categorySections.filter(section => section.detailsElement.open);
+    const openSections = getSearchableCategories().filter(section => section.detailsElement.open);
     expandedCategoryIds = new Set(openSections.map(section => section.categoryId));
   }
 
@@ -195,6 +202,7 @@ function persistViewState(): void {
     searchText: searchInput.value,
     expandedCategoryIds: [...expandedCategoryIds],
     paletteCategoryIds,
+    adjustCategoryIds,
   });
 }
 
@@ -435,83 +443,96 @@ function listenForMixCommands(): void {
 
   saveThemeButton.addEventListener("click", () => postToExtension({ kind: "saveTheme" }));
   discardChangesButton.addEventListener("click", () => postToExtension({ kind: "discardChanges" }));
+  listenForCompare();
   showEditorThemeButton.addEventListener("click", () => postToExtension({ kind: "showEditorTheme" }));
+}
+
+// Held, not clicked. The saved version shows while the button is down and the working copy comes back on release.
+function listenForCompare(): void {
+  let isComparing = false;
+
+  function startComparing(): void {
+    if (isComparing) return;
+
+    isComparing = true;
+    postToExtension({ kind: "showSavedTheme" });
+  }
+
+  function stopComparing(): void {
+    if (!isComparing) return;
+
+    isComparing = false;
+    postToExtension({ kind: "showWorkingTheme" });
+  }
+
+  compareThemeButton.addEventListener("pointerdown", event => {
+    compareThemeButton.setPointerCapture(event.pointerId);
+    startComparing();
+  });
+
+  compareThemeButton.addEventListener("keydown", event => {
+    if ((event.key === " " || event.key === "Enter") && !event.repeat) {
+      startComparing();
+    }
+  });
+
+  for (const releaseEventName of ["pointerup", "pointercancel", "lostpointercapture", "keyup", "blur"]) {
+    compareThemeButton.addEventListener(releaseEventName, stopComparing);
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
 // Adjusting colors
 
-// Built from the same rows as Borrow, so the two lists cannot drift.
-function buildAdjustRows(categories: ColorCategoryView[]): void {
-  adjustRowByTakeTargetId.clear();
+// Built from the same parts as Borrow. The two lists cannot drift.
+function buildAdjustCheckboxes(categories: ColorCategoryView[]): void {
+  adjustPartByTakeTargetId.clear();
 
-  const wholeThemeRow = createAdjustRow(WHOLE_THEME_TAKE_TARGET_ID, "Whole theme");
-  wholeThemeRow.classList.add("adjust-row-whole");
-  adjustWholeThemeRow.replaceChildren(wholeThemeRow);
-
+  const tickedTakeTargetIds = adjustCategoryIds === undefined ? null : new Set(adjustCategoryIds);
   const listFragment = document.createDocumentFragment();
 
   for (const category of categories) {
     if (!category.canImportFromTheme) continue;
 
-    listFragment.append(createAdjustRow(category.id, category.label));
+    const labelElement = document.createElement("label");
+    labelElement.className = "category-tick";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = tickedTakeTargetIds === null || tickedTakeTargetIds.has(category.id);
+
+    const dotElement = document.createElement("span");
+    dotElement.className = "adjust-dot";
+    dotElement.title = "A slider is off center for this part";
+    dotElement.hidden = true;
+
+    labelElement.append(checkbox, document.createTextNode(category.label), dotElement);
+    listFragment.append(labelElement);
+    adjustPartByTakeTargetId.set(category.id, { checkbox, dotElement });
   }
 
   adjustCategoryList.replaceChildren(listFragment);
 }
 
-function createAdjustRow(takeTargetId: string, label: string): HTMLDetailsElement {
-  const detailsElement = document.createElement("details");
-  detailsElement.className = "adjust-row";
-  detailsElement.name = ADJUST_ROW_GROUP_NAME;
+function buildAdjustSliders(): void {
+  adjustSliders.push(...ADJUSTMENT_SLIDER_LABELS.map(([property, label]) => createAdjustSlider(property, label)));
 
-  const summaryElement = document.createElement("summary");
-  summaryElement.className = "take-row adjust-row-summary";
+  adjustResetButton.type = "button";
+  adjustResetButton.className = "adjust-reset";
+  adjustResetButton.textContent = "Reset";
+  adjustResetButton.title = "Put every slider back to the middle for the ticked parts";
 
-  const nameElement = document.createElement("span");
-  nameElement.className = "take-row-name";
-  nameElement.textContent = label;
+  adjustResetButton.addEventListener("click", () => {
+    const colorAdjustments = { ...shownColorAdjustments };
 
-  const dotElement = document.createElement("span");
-  dotElement.className = "adjust-dot";
-  dotElement.title = "A slider is off center";
-  dotElement.hidden = true;
-
-  summaryElement.append(nameElement, dotElement);
-
-  const bodyElement = document.createElement("div");
-  bodyElement.className = "adjust-row-body";
-
-  const sliders = ADJUSTMENT_SLIDER_LABELS.map(([property, sliderLabel]) => createAdjustSlider(property, sliderLabel));
-  bodyElement.append(...sliders.map(slider => slider.labelElement));
-
-  const resetButton = document.createElement("button");
-  resetButton.type = "button";
-  resetButton.className = "adjust-reset";
-  resetButton.textContent = "Reset";
-  resetButton.title = "Put every slider back to the middle";
-  bodyElement.append(resetButton);
-
-  detailsElement.append(summaryElement, bodyElement);
-
-  const row: AdjustRow = { dotElement, sliders };
-  adjustRowByTakeTargetId.set(takeTargetId, row);
-
-  bodyElement.addEventListener("input", event => {
-    if (event.target instanceof HTMLInputElement && event.target.type === "range") {
-      sendAdjustmentFromRow(takeTargetId, row);
-    }
-  });
-
-  resetButton.addEventListener("click", () => {
-    for (const slider of row.sliders) {
-      slider.rangeInput.value = "0";
+    for (const takeTargetId of getTickedAdjustTakeTargetIds()) {
+      delete colorAdjustments[takeTargetId];
     }
 
-    sendAdjustmentFromRow(takeTargetId, row);
+    sendColorAdjustments(colorAdjustments);
   });
 
-  return detailsElement;
+  adjustSliderList.append(...adjustSliders.map(slider => slider.labelElement), adjustResetButton);
 }
 
 function createAdjustSlider(property: keyof ColorAdjustment, label: string): AdjustSlider {
@@ -536,40 +557,123 @@ function createAdjustSlider(property: keyof ColorAdjustment, label: string): Adj
   return { property, labelElement, rangeInput, valueElement };
 }
 
-function showColorAdjustments(colorAdjustments: Record<string, ColorAdjustment>): void {
-  for (const [takeTargetId, row] of adjustRowByTakeTargetId) {
-    showAdjustmentInRow(takeTargetId, row, colorAdjustments[takeTargetId] ?? ZERO_ADJUSTMENT);
-  }
-}
+function listenForAdjustEdits(): void {
+  // One slider writes only its own property to every ticked part.
+  adjustSliderList.addEventListener("input", event => {
+    const slider = adjustSliders.find(candidate => candidate.rangeInput === event.target);
+    if (!slider) return;
 
-function showAdjustmentInRow(takeTargetId: string, row: AdjustRow, adjustment: ColorAdjustment): void {
-  // A dragged range holds focus, and a state that lands then is older than the range. The queue check catches Reset.
-  const isRowBeingEdited = adjustmentChangeSender.hasQueuedChange(takeTargetId);
+    const value = Number(slider.rangeInput.value);
+    const colorAdjustments = { ...shownColorAdjustments };
 
-  let isOffCenter = false;
-
-  for (const slider of row.sliders) {
-    if (!isRowBeingEdited && document.activeElement !== slider.rangeInput) {
-      slider.rangeInput.value = String(adjustment[slider.property]);
+    for (const takeTargetId of getTickedAdjustTakeTargetIds()) {
+      colorAdjustments[takeTargetId] = { ...getShownAdjustment(takeTargetId), [slider.property]: value };
     }
 
-    const shownValue = Number(slider.rangeInput.value);
-    slider.valueElement.textContent = shownValue > 0 ? `+${shownValue}` : String(shownValue);
-    isOffCenter ||= shownValue !== 0;
-  }
+    sendColorAdjustments(colorAdjustments);
+  });
 
-  row.dotElement.hidden = !isOffCenter;
+  adjustCategoryList.addEventListener("change", () => {
+    adjustCategoryIds = getTickedAdjustTakeTargetIds();
+    persistViewState();
+    showAdjustSliders();
+  });
+
+  // Some ticked means tick all. All ticked means untick all. None ticked means back to what was ticked before, or all.
+  adjustAllCheckbox.addEventListener("change", () => {
+    const tickedTakeTargetIds = getTickedAdjustTakeTargetIds();
+    const everyTakeTargetId = adjustPartByTakeTargetId.keys().toArray();
+
+    let nextTickedTakeTargetIds = everyTakeTargetId;
+
+    if (tickedTakeTargetIds.length === everyTakeTargetId.length) {
+      nextTickedTakeTargetIds = [];
+    } else if (tickedTakeTargetIds.length === 0) {
+      nextTickedTakeTargetIds = previousPartialAdjustCategoryIds ?? everyTakeTargetId;
+    } else {
+      previousPartialAdjustCategoryIds = tickedTakeTargetIds;
+    }
+
+    for (const [takeTargetId, part] of adjustPartByTakeTargetId) {
+      part.checkbox.checked = nextTickedTakeTargetIds.includes(takeTargetId);
+    }
+
+    adjustCategoryIds = nextTickedTakeTargetIds;
+    persistViewState();
+    showAdjustSliders();
+  });
 }
 
-function sendAdjustmentFromRow(takeTargetId: string, row: AdjustRow): void {
-  const adjustment: ColorAdjustment = { ...ZERO_ADJUSTMENT };
+function showColorAdjustments(colorAdjustments: Record<string, ColorAdjustment>): void {
+  // A dragged range holds focus, and a state that lands then is older than the page. The queue check catches Reset.
+  const isBeingEdited =
+    adjustmentChangeSender.hasQueuedChange(ADJUSTMENT_SENDER_KEY) ||
+    adjustSliders.some(slider => slider.rangeInput === document.activeElement);
+  if (isBeingEdited) return;
 
-  for (const slider of row.sliders) {
-    adjustment[slider.property] = Number(slider.rangeInput.value);
+  shownColorAdjustments = foldWholeThemeAdjustmentIntoParts(colorAdjustments);
+  showAdjustSliders();
+}
+
+function foldWholeThemeAdjustmentIntoParts(colorAdjustments: Record<string, ColorAdjustment>): Record<string, ColorAdjustment> {
+  const { [WHOLE_THEME_TAKE_TARGET_ID]: wholeThemeAdjustment, ...partAdjustments } = colorAdjustments;
+  if (!wholeThemeAdjustment) {
+    return partAdjustments;
   }
 
-  adjustmentChangeSender.send(takeTargetId, adjustment);
-  showAdjustmentInRow(takeTargetId, row, adjustment);
+  for (const takeTargetId of adjustPartByTakeTargetId.keys()) {
+    partAdjustments[takeTargetId] ??= wholeThemeAdjustment;
+  }
+
+  return partAdjustments;
+}
+
+function getShownAdjustment(takeTargetId: string): ColorAdjustment {
+  return shownColorAdjustments[takeTargetId] ?? ZERO_ADJUSTMENT;
+}
+
+function getTickedAdjustTakeTargetIds(): string[] {
+  return adjustPartByTakeTargetId
+    .entries()
+    .filter(([, part]) => part.checkbox.checked)
+    .map(([takeTargetId]) => takeTargetId)
+    .toArray();
+}
+
+// A slider shows the value that the ticked parts share. When they differ it sits in the middle and says so.
+function showAdjustSliders(): void {
+  for (const [takeTargetId, part] of adjustPartByTakeTargetId) {
+    part.dotElement.hidden = isZeroAdjustment(getShownAdjustment(takeTargetId));
+  }
+
+  const tickedTakeTargetIds = getTickedAdjustTakeTargetIds();
+  const hasTickedPart = tickedTakeTargetIds.length > 0;
+  const isEveryPartTicked = tickedTakeTargetIds.length === adjustPartByTakeTargetId.size;
+
+  adjustAllCheckbox.checked = isEveryPartTicked;
+  adjustAllCheckbox.indeterminate = hasTickedPart && !isEveryPartTicked;
+  adjustResetButton.disabled = !hasTickedPart;
+
+  for (const slider of adjustSliders) {
+    const tickedValues = tickedTakeTargetIds.map(takeTargetId => getShownAdjustment(takeTargetId)[slider.property]);
+    const isMixed = new Set(tickedValues).size > 1;
+    const shownValue = isMixed ? 0 : (tickedValues[0] ?? 0);
+
+    slider.rangeInput.disabled = !hasTickedPart;
+    slider.rangeInput.value = String(shownValue);
+    slider.labelElement.classList.toggle("is-mixed", isMixed);
+    slider.valueElement.textContent = isMixed ? "mixed" : formatAdjustmentValue(shownValue);
+  }
+}
+
+function formatAdjustmentValue(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function sendColorAdjustments(colorAdjustments: Record<string, ColorAdjustment>): void {
+  shownColorAdjustments = colorAdjustments;
+  adjustmentChangeSender.send(ADJUSTMENT_SENDER_KEY, colorAdjustments);
+  showAdjustSliders();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -660,7 +764,7 @@ function showCategories(categories: ColorCategoryView[], wholeThemeTakenFromLabe
   if (categoryStructure !== builtCategoryStructure) {
     buildCategories(categories);
     buildImportCategories(categories);
-    buildAdjustRows(categories);
+    buildAdjustCheckboxes(categories);
     builtCategoryStructure = categoryStructure;
     applySearch();
   }
@@ -680,7 +784,7 @@ function getCategoryStructure(categories: ColorCategoryView[]): string {
 
 function buildCategories(categories: ColorCategoryView[]): void {
   rowsByColorId.clear();
-  categorySections.length = 0;
+  colorCategorySections.length = 0;
 
   const categoryFragment = document.createDocumentFragment();
 
@@ -702,7 +806,7 @@ function buildCategories(categories: ColorCategoryView[]): void {
 
     detailsElement.addEventListener("toggle", () => persistViewState());
 
-    categorySections.push({ categoryId: category.id, detailsElement, colorKeyRows });
+    colorCategorySections.push({ categoryId: category.id, detailsElement, searchableRows: colorKeyRows });
     categoryFragment.append(detailsElement);
   }
 
@@ -892,10 +996,10 @@ function applySearch(): void {
   const query = searchInput.value.trim().toLowerCase();
   const isSearching = query !== "";
 
-  for (const section of categorySections) {
+  for (const section of getSearchableCategories()) {
     let matchingRowCount = 0;
 
-    for (const row of section.colorKeyRows) {
+    for (const row of section.searchableRows) {
       const isMatch = !isSearching || row.searchText.includes(query);
       row.rowElement.hidden = !isMatch;
 
@@ -910,6 +1014,10 @@ function applySearch(): void {
     section.detailsElement.hidden = matchingRowCount === 0;
     section.detailsElement.open = isSearching ? matchingRowCount > 0 : expandedCategoryIds.has(section.categoryId);
   }
+}
+
+function getSearchableCategories(): SearchableCategory[] {
+  return [getSyntaxRuleCategory(), ...colorCategorySections];
 }
 
 // ---------------------------------------------------------------------------------------------

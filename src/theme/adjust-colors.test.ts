@@ -4,9 +4,11 @@ import { test } from "node:test";
 import {
   adjustHexColor,
   adjustThemeColors,
+  isSameAdjustments,
   isZeroAdjustment,
   normalizeColorAdjustment,
-  setColorAdjustment,
+  normalizeColorAdjustments,
+  setColorAdjustments,
 } from "./adjust-colors.ts";
 
 import type { ColorAdjustment } from "./adjust-colors.ts";
@@ -137,19 +139,26 @@ test("normalizeColorAdjustment gives zeros for garbage and clamps the rest", () 
   assert.equal(isZeroAdjustment(normalizeColorAdjustment(null)), true);
 });
 
-test("setColorAdjustment drops the entry at zero and the map when empty", () => {
+test("setColorAdjustments replaces the map, drops zero entries and the map when empty", () => {
   const theme = createTheme();
 
-  setColorAdjustment(theme, "editor", createAdjustment({ contrast: 20 }));
-  assert.deepEqual(theme.colorAdjustments?.editor, createAdjustment({ contrast: 20 }));
+  setColorAdjustments(theme, { editor: createAdjustment({ contrast: 20 }), terminal: ZERO });
+  assert.deepEqual(theme.colorAdjustments, { editor: createAdjustment({ contrast: 20 }) });
 
-  setColorAdjustment(theme, "editor", ZERO);
-  assert.equal(theme.colorAdjustments?.editor, undefined);
-  assert.deepEqual(Object.keys(theme.colorAdjustments ?? {}), ["*whole*"]);
-
-  setColorAdjustment(theme, "*whole*", ZERO);
+  setColorAdjustments(theme, { editor: ZERO });
   assert.equal("colorAdjustments" in theme, false);
 
-  setColorAdjustment(theme, "terminal", ZERO);
+  setColorAdjustments(theme, {});
   assert.equal("colorAdjustments" in theme, false);
+});
+
+test("normalizeColorAdjustments drops zero and garbage entries and isSameAdjustments compares the rest", () => {
+  const normalized = normalizeColorAdjustments({ editor: { contrast: 20 }, terminal: {}, tabs: "nope" });
+  assert.deepEqual(normalized, { editor: createAdjustment({ contrast: 20 }) });
+
+  assert.equal(isSameAdjustments(normalized, { editor: createAdjustment({ contrast: 20 }) }), true);
+  assert.equal(isSameAdjustments(normalized, { editor: createAdjustment({ contrast: 21 }) }), false);
+  assert.equal(isSameAdjustments(normalized, {}), false);
+  assert.equal(isSameAdjustments(normalized, { editor: normalized.editor, tabs: normalized.editor }), false);
+  assert.equal(isSameAdjustments({}, normalizeColorAdjustments(undefined)), true);
 });

@@ -16,10 +16,11 @@ import {
   createTokenColorRuleViews,
   deleteTokenColorRule,
   isTokenInspectionEnabled,
+  refreshTokenInspection,
   setTokenColorRule,
   setTokenInspectionEnabled,
 } from "./syntax/token-colors.ts";
-import { isSameAdjustment, normalizeColorAdjustment, setColorAdjustment } from "./theme/adjust-colors.ts";
+import { isSameAdjustments, normalizeColorAdjustments, setColorAdjustments } from "./theme/adjust-colors.ts";
 import { applyThemeDocument, isEditorThemeShowing, showEditorTheme, switchThemeBase } from "./theme/apply-theme.ts";
 import { composeAdjustedTheme } from "./theme/compose-adjusted-theme.ts";
 import {
@@ -62,7 +63,6 @@ import {
 
 import type { ThemeEditorViewProvider } from "./panel/theme-editor-view.ts";
 import type { ColorCategoryView, EditorState, SavedThemeView, WebviewToExtensionMessage } from "./panel/webview-protocol.ts";
-import type { ColorAdjustment } from "./theme/adjust-colors.ts";
 import type { ColorThemeDocument, ThemeBaseKind } from "./theme/generated-theme-file.ts";
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -145,21 +145,13 @@ async function createEditorState(context: vscode.ExtensionContext): Promise<Edit
     tokenColorRules: createTokenColorRuleViews(theme),
     isTokenInspectionEnabled: isTokenInspectionEnabled(),
     wholeThemeTakenFromLabel: wholeThemeSource?.label ?? null,
-    colorAdjustments: createColorAdjustmentViews(theme),
+    // A hand-edited or corrupt file must not reach the sliders as it is.
+    colorAdjustments: normalizeColorAdjustments(theme.colorAdjustments),
     hasUnsavedChanges: hasUnsavedChanges(base),
     isEditorThemeShowing: isEditorThemeShowing(base),
     applyFailure: getMostRecentApplyFailure(),
     syncState: getSyncState(),
   };
-}
-
-// A hand-edited or corrupt file must not reach the sliders as it is.
-function createColorAdjustmentViews(theme: ColorThemeDocument): Record<string, ColorAdjustment> {
-  const adjustmentEntries = Object.entries(theme.colorAdjustments ?? {});
-
-  return Object.fromEntries(
-    adjustmentEntries.map(([takeTargetId, adjustment]) => [takeTargetId, normalizeColorAdjustment(adjustment)])
-  );
 }
 
 async function handleWebviewMessage(
@@ -182,6 +174,18 @@ async function handleWebviewMessage(
 
     case "showEditorTheme": {
       recordApplyResult(await showEditorTheme(base));
+      break;
+    }
+
+    case "showSavedTheme": {
+      const { savedTheme } = await openEditableTheme(context, base);
+      recordApplyResult(await applyThemeDocument(context, base, savedTheme));
+      break;
+    }
+
+    case "showWorkingTheme": {
+      const { theme } = await openEditableTheme(context, base);
+      recordApplyResult(await applyThemeDocument(context, base, theme));
       break;
     }
 
@@ -251,16 +255,16 @@ async function handleWebviewMessage(
       break;
     }
 
-    case "setColorAdjustment": {
-      const adjustment = normalizeColorAdjustment(message.adjustment);
+    case "setColorAdjustments": {
+      const colorAdjustments = normalizeColorAdjustments(message.colorAdjustments);
 
-      // Reset on a row already at zero must not mark the theme dirty.
+      // Reset while already at zero must not mark the theme dirty.
       const { theme: currentTheme } = await openEditableTheme(context, base);
-      const currentAdjustment = normalizeColorAdjustment(currentTheme.colorAdjustments?.[message.takeTargetId]);
-      if (isSameAdjustment(currentAdjustment, adjustment)) break;
+      const currentColorAdjustments = normalizeColorAdjustments(currentTheme.colorAdjustments);
+      if (isSameAdjustments(currentColorAdjustments, colorAdjustments)) break;
 
       const { theme } = await beginEdit(context, base);
-      setColorAdjustment(theme, message.takeTargetId, adjustment);
+      setColorAdjustments(theme, colorAdjustments);
 
       recordApplyResult(await applyThemeDocument(context, base, theme));
       break;
@@ -392,6 +396,8 @@ async function handleWebviewMessage(
       break;
     }
   }
+
+  refreshTokenInspection(context, getThemeEditorView);
 }
 
 const FLASH_COLOR = "#ff00ff";

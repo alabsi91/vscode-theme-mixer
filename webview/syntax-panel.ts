@@ -1,3 +1,4 @@
+import { SYNTAX_HIGHLIGHTING_TAKE_TARGET_ID } from "../src/panel/webview-protocol.ts";
 import { HEX_COLOR_PATTERN } from "../src/theme/hex-color.ts";
 import { createThrottledSender, getColorWithCurrentAlpha, getSwatchValue } from "./color-input.ts";
 
@@ -11,6 +12,14 @@ export interface SyntaxPanelCallbacks {
   deleteTokenColorRule(ruleIndex: number): void;
   createTokenColorRuleForScope(scope: string, foreground: string): void;
   changeTokenInspectionEnabled(isEnabled: boolean): void;
+  applyColorsSearch(): void;
+}
+
+/** What the Colors search needs from a category. Its accordion, and the rows that it can hide. */
+export interface SearchableCategory {
+  categoryId: string;
+  detailsElement: HTMLDetailsElement;
+  searchableRows: { rowElement: HTMLElement; searchText: string }[];
 }
 
 // The first match wins. Specific entries come before general ones. Anything missing falls back to the raw scope.
@@ -68,9 +77,9 @@ interface TokenColorRuleRow {
 
 let panelCallbacks: SyntaxPanelCallbacks | null = null;
 
-let filterInput: HTMLInputElement;
+let ruleCategoryElement: HTMLDetailsElement;
+let ruleCategorySummaryElement: HTMLElement;
 let ruleListElement: HTMLElement;
-let ruleCountElement: HTMLElement;
 
 let followCursorCheckbox: HTMLInputElement;
 let inspectorBodyElement: HTMLElement;
@@ -78,12 +87,17 @@ let inspectorTokenElement: HTMLElement;
 let inspectorVerdictElement: HTMLElement;
 let inspectorSemanticWarningElement: HTMLElement;
 let inspectorScopeListElement: HTMLElement;
+let inspectorRuleElement: HTMLElement;
+let inspectorCreateRuleHintElement: HTMLElement;
 let inspectorCreateRuleRow: HTMLElement;
-let inspectorCreateRuleColorInput: HTMLInputElement;
 let inspectorCreateRuleButton: HTMLButtonElement;
 
 const ruleRows: TokenColorRuleRow[] = [];
 const ruleRowByRuleIndex = new Map<number, TokenColorRuleRow>();
+
+let latestTokenColorRules: TokenColorRuleView[] = [];
+
+let inspectorRuleRow: TokenColorRuleRow | null = null;
 
 const fontStyleNamesByRuleIndex = new Map<number, Set<FontStyleName>>();
 const rawFontStyleByRuleIndex = new Map<number, string | null>();
@@ -100,30 +114,46 @@ const ruleColorChangeSender = createThrottledSender<number, string>((ruleIndex, 
 let builtRuleStructure = "";
 
 let scopeForNewRule = "";
+let foregroundForNewRule = FALLBACK_NEW_RULE_COLOR;
 
 // Deleting a rule shifts every index after it. Editing by an old index would hit the wrong rule.
 let isWaitingForRuleListRebuild = false;
 
-export function initSyntaxPanel(containerElement: HTMLElement, callbacks: SyntaxPanelCallbacks): void {
+export function initSyntaxPanel(
+  ruleListContainerElement: HTMLElement,
+  inspectorContainerElement: HTMLElement,
+  callbacks: SyntaxPanelCallbacks
+): void {
   panelCallbacks = callbacks;
 
   ruleRows.length = 0;
   ruleRowByRuleIndex.clear();
   builtRuleStructure = "";
 
-  buildPanel(containerElement);
-  listenForRuleEdits();
+  buildRuleCategory(ruleListContainerElement);
+  buildInspector(inspectorContainerElement);
+  listenForRuleEdits(ruleListElement);
+  listenForRuleEdits(inspectorRuleElement);
   listenForInspectorCommands();
 }
 
+export function getSyntaxRuleCategory(): SearchableCategory {
+  return { categoryId: SYNTAX_HIGHLIGHTING_TAKE_TARGET_ID, detailsElement: ruleCategoryElement, searchableRows: ruleRows };
+}
+
 export function showTokenColorRules(tokenColorRules: TokenColorRuleView[]): void {
+  latestTokenColorRules = tokenColorRules;
+
   const ruleStructure = getRuleStructure(tokenColorRules);
 
   if (ruleStructure !== builtRuleStructure) {
     buildRuleRows(tokenColorRules);
     builtRuleStructure = ruleStructure;
-    applyRuleFilter();
     isWaitingForRuleListRebuild = false;
+
+    // A rebuild can move every index. The next inspection brings the row back.
+    showInspectorRule(null);
+    panelCallbacks?.applyColorsSearch();
   }
 
   for (const rule of tokenColorRules) {
@@ -131,9 +161,13 @@ export function showTokenColorRules(tokenColorRules: TokenColorRuleView[]): void
     if (row) {
       showRuleInRow(row, rule);
     }
+
+    if (inspectorRuleRow?.ruleIndex === rule.index) {
+      showRuleInRow(inspectorRuleRow, rule);
+    }
   }
 
-  ruleCountElement.textContent = `${tokenColorRules.length} rules`;
+  ruleCategorySummaryElement.textContent = `Syntax Highlighting (${tokenColorRules.length})`;
 }
 
 export function showTokenInspectionEnabled(isEnabled: boolean): void {
@@ -146,6 +180,7 @@ export function showTokenInspection(inspection: TokenInspectionView | null): voi
   if (!inspection) {
     inspectorBodyElement.hidden = true;
     scopeForNewRule = "";
+    showInspectorRule(null);
     return;
   }
 
@@ -156,6 +191,9 @@ export function showTokenInspection(inspection: TokenInspectionView | null): voi
   showInspectionScopes(inspection.scopes);
   showCreateRuleOffer(inspection);
 
+  const winningRule = latestTokenColorRules.find(rule => rule.index === inspection.winningRuleIndex) ?? null;
+  showInspectorRule(winningRule);
+
   if (inspection.winningRuleIndex !== null) {
     highlightWinningRule(inspection.winningRuleIndex);
   }
@@ -164,44 +202,23 @@ export function showTokenInspection(inspection: TokenInspectionView | null): voi
 // ---------------------------------------------------------------------------------------------
 // Building the panel
 
-function buildPanel(containerElement: HTMLElement): void {
-  containerElement.classList.add("syntax-panel");
-
-  const inspectorElement = buildInspector();
-
-  const filterRow = document.createElement("div");
-  filterRow.className = "syntax-filter-row";
-
-  filterInput = document.createElement("input");
-  filterInput.type = "search";
-  filterInput.className = "syntax-filter";
-  filterInput.placeholder = "Filter rules";
-  filterInput.autocomplete = "off";
-
-  ruleCountElement = document.createElement("span");
-  ruleCountElement.className = "syntax-rule-count";
-
-  filterRow.append(filterInput, ruleCountElement);
-
+function buildRuleCategory(containerElement: HTMLElement): void {
   ruleListElement = document.createElement("div");
   ruleListElement.className = "syntax-rule-list";
 
-  const sectionElement = document.createElement("details");
-  sectionElement.className = "category";
-  sectionElement.name = ACCORDION_GROUP_NAME;
+  ruleCategoryElement = document.createElement("details");
+  ruleCategoryElement.className = "category";
+  ruleCategoryElement.name = ACCORDION_GROUP_NAME;
 
-  const summaryElement = document.createElement("summary");
-  summaryElement.className = "category-summary";
-  summaryElement.textContent = "Syntax Highlighting";
+  ruleCategorySummaryElement = document.createElement("summary");
+  ruleCategorySummaryElement.className = "category-summary";
+  ruleCategorySummaryElement.textContent = "Syntax Highlighting";
 
-  sectionElement.append(summaryElement, inspectorElement, filterRow, ruleListElement);
-  containerElement.replaceChildren(sectionElement);
+  ruleCategoryElement.append(ruleCategorySummaryElement, ruleListElement);
+  containerElement.replaceChildren(ruleCategoryElement);
 }
 
-function buildInspector(): HTMLElement {
-  const inspectorElement = document.createElement("section");
-  inspectorElement.className = "syntax-inspector";
-
+function buildInspector(inspectorElement: HTMLElement): void {
   const followCursorLabel = document.createElement("label");
   followCursorLabel.className = "syntax-follow-cursor";
   followCursorLabel.title = "Shows which rule colors the word under your cursor in the editor";
@@ -232,32 +249,33 @@ function buildInspector(): HTMLElement {
   inspectorScopeListElement = document.createElement("div");
   inspectorScopeListElement.className = "syntax-scope";
 
-  inspectorCreateRuleRow = document.createElement("div");
-  inspectorCreateRuleRow.className = "syntax-create-rule-row";
-  inspectorCreateRuleRow.hidden = true;
+  inspectorRuleElement = document.createElement("div");
+  inspectorRuleElement.className = "syntax-inspector-rule";
+  inspectorRuleElement.hidden = true;
 
-  inspectorCreateRuleColorInput = document.createElement("input");
-  inspectorCreateRuleColorInput.type = "color";
-  inspectorCreateRuleColorInput.className = "syntax-swatch";
-  inspectorCreateRuleColorInput.title = "The color the new rule starts with";
+  inspectorCreateRuleHintElement = document.createElement("p");
+  inspectorCreateRuleHintElement.className = "section-hint syntax-create-rule-hint";
 
   inspectorCreateRuleButton = document.createElement("button");
   inspectorCreateRuleButton.type = "button";
   inspectorCreateRuleButton.className = "syntax-create-rule-button";
+  inspectorCreateRuleButton.textContent = "Add a rule for this token";
 
-  inspectorCreateRuleRow.append(inspectorCreateRuleColorInput, inspectorCreateRuleButton);
+  inspectorCreateRuleRow = document.createElement("div");
+  inspectorCreateRuleRow.className = "syntax-create-rule-row";
+  inspectorCreateRuleRow.hidden = true;
+  inspectorCreateRuleRow.append(inspectorCreateRuleHintElement, inspectorCreateRuleButton);
 
   inspectorBodyElement.append(
     inspectorTokenElement,
     inspectorSemanticWarningElement,
     inspectorVerdictElement,
     inspectorScopeListElement,
+    inspectorRuleElement,
     inspectorCreateRuleRow
   );
 
   inspectorElement.append(followCursorLabel, inspectorBodyElement);
-
-  return inspectorElement;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -414,8 +432,8 @@ function parseFontStyle(fontStyle: string | null): Set<FontStyleName> {
 // ---------------------------------------------------------------------------------------------
 // Editing a rule
 
-function listenForRuleEdits(): void {
-  ruleListElement.addEventListener("input", event => {
+function listenForRuleEdits(rowContainerElement: HTMLElement): void {
+  rowContainerElement.addEventListener("input", event => {
     if (isWaitingForRuleListRebuild) return;
 
     const target = event.target as HTMLElement;
@@ -431,7 +449,7 @@ function listenForRuleEdits(): void {
     ruleColorChangeSender.send(ruleIndex, foreground);
   });
 
-  ruleListElement.addEventListener("click", event => {
+  rowContainerElement.addEventListener("click", event => {
     if (isWaitingForRuleListRebuild) return;
 
     const target = event.target as HTMLElement;
@@ -449,8 +467,6 @@ function listenForRuleEdits(): void {
       }
     }
   });
-
-  filterInput.addEventListener("input", () => applyRuleFilter());
 }
 
 function deleteRule(ruleIndex: number): void {
@@ -520,17 +536,6 @@ function getRowRuleIndex(element: HTMLElement): number | null {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Filtering
-
-function applyRuleFilter(): void {
-  const query = filterInput.value.trim().toLowerCase();
-
-  for (const row of ruleRows) {
-    row.rowElement.hidden = query !== "" && !row.searchText.includes(query);
-  }
-}
-
-// ---------------------------------------------------------------------------------------------
 // The inspector
 
 function listenForInspectorCommands(): void {
@@ -545,7 +550,7 @@ function listenForInspectorCommands(): void {
   inspectorCreateRuleButton.addEventListener("click", () => {
     if (!scopeForNewRule) return;
 
-    panelCallbacks?.createTokenColorRuleForScope(scopeForNewRule, inspectorCreateRuleColorInput.value);
+    panelCallbacks?.createTokenColorRuleForScope(scopeForNewRule, foregroundForNewRule);
 
     // One rule per press. The offer comes back with the next inspection, when the token has no rule of its own.
     scopeForNewRule = "";
@@ -567,15 +572,26 @@ function showInspectionVerdict(inspection: TokenInspectionView): void {
     inspectorSemanticWarningElement.textContent = `Painted by the language server as "${inspection.semanticTokenType}", not by the rule below.`;
   }
 
-  if (inspection.winningRuleIndex === null) {
-    inspectorVerdictElement.textContent = "No rule matches. Using the default color.";
+  inspectorVerdictElement.hidden = inspection.winningRuleIndex !== null;
+  inspectorVerdictElement.textContent = "No rule matches. Using the default color.";
+}
+
+function showInspectorRule(rule: TokenColorRuleView | null): void {
+  if (!rule) {
+    inspectorRuleRow = null;
+    inspectorRuleElement.hidden = true;
+    inspectorRuleElement.replaceChildren();
     return;
   }
 
-  const winningRow = ruleRowByRuleIndex.get(inspection.winningRuleIndex);
-  const winningRuleLabel = winningRow?.rowElement.querySelector(".syntax-rule-label")?.textContent ?? "a rule";
+  // Swapping the row mid drag would pull the picker out from under it.
+  if (inspectorRuleRow?.ruleIndex !== rule.index) {
+    inspectorRuleRow = createRuleRow(rule);
+    inspectorRuleElement.hidden = false;
+    inspectorRuleElement.replaceChildren(inspectorRuleRow.rowElement);
+  }
 
-  inspectorVerdictElement.textContent = winningRuleLabel;
+  showRuleInRow(inspectorRuleRow, rule);
 }
 
 function showInspectionScopes(scopes: string[]): void {
@@ -599,9 +615,13 @@ function showCreateRuleOffer(inspection: TokenInspectionView): void {
   if (canCreateRule) {
     const hasReadableTokenColor = inspection.foreground !== null && HEX_COLOR_PATTERN.test(inspection.foreground);
 
-    inspectorCreateRuleButton.textContent = "Color this token only";
-    inspectorCreateRuleButton.title = `Adds a rule for ${mostSpecificScope} with this color. Other tokens keep theirs.`;
-    inspectorCreateRuleColorInput.value = hasReadableTokenColor ? getSwatchValue(inspection.foreground) : FALLBACK_NEW_RULE_COLOR;
+    inspectorCreateRuleHintElement.textContent =
+      inspection.winningRuleIndex === null
+        ? "A rule of its own gives this token a color."
+        : "The rule above colors other tokens too. A rule of its own changes just this one.";
+
+    inspectorCreateRuleButton.title = `Adds a rule for ${mostSpecificScope}, starting with the token's current color.`;
+    foregroundForNewRule = hasReadableTokenColor ? getSwatchValue(inspection.foreground) : FALLBACK_NEW_RULE_COLOR;
   }
 }
 
@@ -612,12 +632,5 @@ function clearWinningRuleHighlight(): void {
 }
 
 function highlightWinningRule(winningRuleIndex: number): void {
-  const winningRow = ruleRowByRuleIndex.get(winningRuleIndex);
-  if (!winningRow) return;
-
-  winningRow.rowElement.classList.add("is-winning-rule");
-
-  if (!winningRow.rowElement.hidden) {
-    winningRow.rowElement.scrollIntoView({ block: "nearest" });
-  }
+  ruleRowByRuleIndex.get(winningRuleIndex)?.rowElement.classList.add("is-winning-rule");
 }

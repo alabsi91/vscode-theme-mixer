@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 import { SYNTAX_HIGHLIGHTING_TAKE_TARGET_ID, WHOLE_THEME_TAKE_TARGET_ID } from "../panel/webview-protocol.ts";
-import { adjustThemeColors, isZeroAdjustment, normalizeColorAdjustment } from "./adjust-colors.ts";
+import { adjustThemeColors, normalizeColorAdjustments } from "./adjust-colors.ts";
 import { getColorIdsInBucket } from "./workbench-color-catalog.ts";
 
 import type { AdjustmentStep } from "./adjust-colors.ts";
@@ -18,12 +18,9 @@ export async function composeAdjustedTheme(
   const steps: AdjustmentStep[] = [];
   let wholeThemeStep: AdjustmentStep | undefined;
 
-  const adjustmentEntries = Object.entries(theme.colorAdjustments ?? {});
+  const adjustmentEntries = Object.entries(normalizeColorAdjustments(theme.colorAdjustments));
 
-  for (const [takeTargetId, rawAdjustment] of adjustmentEntries) {
-    const adjustment = normalizeColorAdjustment(rawAdjustment);
-    if (isZeroAdjustment(adjustment)) continue;
-
+  for (const [takeTargetId, adjustment] of adjustmentEntries) {
     if (takeTargetId === WHOLE_THEME_TAKE_TARGET_ID) {
       wholeThemeStep = { colorIds: Object.keys(theme.colors), includesSyntax: true, adjustment };
       continue;

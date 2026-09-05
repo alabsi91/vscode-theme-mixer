@@ -54,21 +54,44 @@ export function isSameAdjustment(left: ColorAdjustment, right: ColorAdjustment):
   return ADJUSTMENT_PROPERTIES.every(property => left[property] === right[property]);
 }
 
-/** Deletes the entry at zero, and the map when that leaves it empty. */
-export function setColorAdjustment(theme: ColorThemeDocument, takeTargetId: string, adjustment: ColorAdjustment): void {
-  if (!isZeroAdjustment(adjustment)) {
-    theme.colorAdjustments ??= {};
-    theme.colorAdjustments[takeTargetId] = adjustment;
+/** Every entry normalized, the zero ones dropped. */
+export function normalizeColorAdjustments(value: unknown): Record<string, ColorAdjustment> {
+  const record = isRecord(value) ? value : {};
+  const colorAdjustments: Record<string, ColorAdjustment> = {};
+
+  for (const [takeTargetId, rawAdjustment] of Object.entries(record)) {
+    const adjustment = normalizeColorAdjustment(rawAdjustment);
+
+    if (!isZeroAdjustment(adjustment)) {
+      colorAdjustments[takeTargetId] = adjustment;
+    }
+  }
+
+  return colorAdjustments;
+}
+
+export function isSameAdjustments(left: Record<string, ColorAdjustment>, right: Record<string, ColorAdjustment>): boolean {
+  const leftTakeTargetIds = Object.keys(left);
+  if (leftTakeTargetIds.length !== Object.keys(right).length) {
+    return false;
+  }
+
+  return leftTakeTargetIds.every(takeTargetId => {
+    const rightAdjustment = right[takeTargetId] as ColorAdjustment | undefined;
+    return rightAdjustment !== undefined && isSameAdjustment(left[takeTargetId], rightAdjustment);
+  });
+}
+
+/** Replaces every entry. Zero entries are dropped, and the map with them when nothing is left. */
+export function setColorAdjustments(theme: ColorThemeDocument, colorAdjustments: Record<string, ColorAdjustment>): void {
+  const keptEntries = Object.entries(colorAdjustments).filter(([, adjustment]) => !isZeroAdjustment(adjustment));
+
+  if (keptEntries.length === 0) {
+    delete theme.colorAdjustments;
     return;
   }
 
-  if (!theme.colorAdjustments) return;
-
-  delete theme.colorAdjustments[takeTargetId];
-
-  if (Object.keys(theme.colorAdjustments).length === 0) {
-    delete theme.colorAdjustments;
-  }
+  theme.colorAdjustments = Object.fromEntries(keptEntries);
 }
 
 /** CSS filter math, brightness then contrast then saturation then hue. A value that is not hex comes back unchanged. */

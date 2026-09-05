@@ -94,6 +94,9 @@ export type WebviewToExtensionMessage =
   | { kind: "saveTheme" }
   | { kind: "discardChanges" }
   | { kind: "showEditorTheme" }
+  /** Paints the saved version while the Compare button is held. The working copy is untouched. */
+  | { kind: "showSavedTheme" }
+  | { kind: "showWorkingTheme" }
   | { kind: "exportTheme" }
   | { kind: "exportThemeJson" }
   | { kind: "exportThemeVsix" }
@@ -103,7 +106,8 @@ export type WebviewToExtensionMessage =
   | { kind: "restoreCategoryFromWholeTheme"; categoryId: string }
   | { kind: "setBase"; base: ThemeBaseKind }
   | { kind: "setColor"; colorId: string; value: string | null }
-  | { kind: "setColorAdjustment"; takeTargetId: string; adjustment: ColorAdjustment }
+  /** Every slider value at once, keyed by take target id. A missing id means all zero. */
+  | { kind: "setColorAdjustments"; colorAdjustments: Record<string, ColorAdjustment> }
   /** One edit for many keys at once. The palette swaps a color everywhere it is used. */
   | { kind: "replaceColors"; colors: Record<string, string> }
   /** Back to the saved values for these only. */
