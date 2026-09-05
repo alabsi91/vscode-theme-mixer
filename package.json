@@ -1,5 +1,5 @@
 {
-  "name": "vscode-theme-editor",
+  "name": "vscode-theme-mixer",
   "displayName": "Theme Mixer",
   "description": "Mix, tweak and live-preview VS Code color themes",
   "version": "0.1.0",
@@ -9,12 +9,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alabsi91/vscode-theme-editor.git"
+    "url": "https://github.com/alabsi91/vscode-theme-mixer.git"
   },
   "bugs": {
-    "url": "https://github.com/alabsi91/vscode-theme-editor/issues"
+    "url": "https://github.com/alabsi91/vscode-theme-mixer/issues"
   },
-  "homepage": "https://github.com/alabsi91/vscode-theme-editor#readme",
+  "homepage": "https://github.com/alabsi91/vscode-theme-mixer#readme",
   "type": "module",
   "main": "./lib/index.mjs",
   "extensionKind": [
