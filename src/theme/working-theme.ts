@@ -27,6 +27,7 @@ export const DEFAULT_NEW_THEME_NAME = "My Theme";
 export interface WorkingTheme {
   savedThemeId: string;
   theme: ColorThemeDocument;
+  savedTheme: ColorThemeDocument;
   takenFromSources: Record<string, TakenFromSource>;
   /** Set by a sync pull that changed or deleted this theme underneath the edits. Save asks what to keep. */
   hasRemoteChangesUnderneath?: boolean;
@@ -65,7 +66,12 @@ export async function openEditableTheme(context: vscode.ExtensionContext, base: 
 
   const { savedThemeId, theme } = await openActiveSavedTheme(context, base);
 
-  return { savedThemeId, theme, takenFromSources: await getTakenFromSources(context, savedThemeId) };
+  return {
+    savedThemeId,
+    theme,
+    savedTheme: structuredClone(theme),
+    takenFromSources: await getTakenFromSources(context, savedThemeId),
+  };
 }
 
 /** The theme with the adjustment sliders baked in. What export and install hand out. */
@@ -121,6 +127,24 @@ export async function discardWorkingTheme(context: vscode.ExtensionContext, base
 
   const { theme } = await openActiveSavedTheme(context, base);
   recordApplyResult(await applyThemeDocument(context, base, theme));
+}
+
+/** Puts the saved values back for these keys only. Every other edit stays. */
+export async function revertColors(context: vscode.ExtensionContext, base: ThemeBaseKind, colorIds: string[]): Promise<void> {
+  const workingTheme = workingThemeByBase.get(base);
+  if (!workingTheme) return;
+
+  for (const colorId of colorIds) {
+    const savedValue = workingTheme.savedTheme.colors[colorId];
+
+    if (savedValue === undefined) {
+      delete workingTheme.theme.colors[colorId];
+    } else {
+      workingTheme.theme.colors[colorId] = savedValue;
+    }
+  }
+
+  recordApplyResult(await applyThemeDocument(context, base, workingTheme.theme));
 }
 
 /** Paints what took a deleted active theme's place. The shipped placeholder when nothing did. */

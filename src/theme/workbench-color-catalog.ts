@@ -335,7 +335,8 @@ export async function createColorCategoryViews(
   context: vscode.ExtensionContext,
   theme: ColorThemeDocument,
   base: ThemeBaseKind,
-  adjustedTheme: ColorThemeDocument
+  adjustedTheme: ColorThemeDocument,
+  savedTheme: ColorThemeDocument
 ): Promise<ColorCategoryView[]> {
   const catalog = await loadWorkbenchColorCatalog(context);
 
@@ -349,6 +350,7 @@ export async function createColorCategoryViews(
         id: colorId,
         description: metadata?.description ?? "",
         value: theme.colors[colorId] ?? null,
+        savedValue: savedTheme.colors[colorId] ?? null,
         defaultValue: metadata?.defaults[base] ?? null,
         adjustedValue: adjustedTheme.colors[colorId] ?? null,
       };
@@ -363,7 +365,7 @@ export async function createColorCategoryViews(
     };
   });
 
-  const unknownColorKeyViews = createUnknownColorKeyViews(catalog, theme, adjustedTheme);
+  const unknownColorKeyViews = createUnknownColorKeyViews(catalog, theme, adjustedTheme, savedTheme);
   if (unknownColorKeyViews.length > 0) {
     categoryViews.push({
       id: UNKNOWN_BUCKET.id,
@@ -385,9 +387,12 @@ function isImportableBucket(bucketId: string): boolean {
 function createUnknownColorKeyViews(
   catalog: WorkbenchColorCatalog,
   theme: ColorThemeDocument,
-  adjustedTheme: ColorThemeDocument
+  adjustedTheme: ColorThemeDocument,
+  savedTheme: ColorThemeDocument
 ): ColorKeyView[] {
-  const unknownColorIds = Object.keys(theme.colors).filter(colorId => !catalog.metadataByColorId.has(colorId));
+  const unknownColorIds = [...new Set([...Object.keys(theme.colors), ...Object.keys(savedTheme.colors)])].filter(
+    colorId => !catalog.metadataByColorId.has(colorId)
+  );
   unknownColorIds.sort((left, right) => left.localeCompare(right));
 
   return unknownColorIds.map((colorId): ColorKeyView => {
@@ -395,6 +400,7 @@ function createUnknownColorKeyViews(
       id: colorId,
       description: "",
       value: theme.colors[colorId] ?? null,
+      savedValue: savedTheme.colors[colorId] ?? null,
       defaultValue: null,
       adjustedValue: adjustedTheme.colors[colorId] ?? null,
     };

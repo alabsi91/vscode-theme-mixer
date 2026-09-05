@@ -2,6 +2,7 @@ import { WHOLE_THEME_TAKE_TARGET_ID } from "../src/panel/webview-protocol.ts";
 import { ADJUSTMENT_LIMITS } from "../src/theme/adjust-colors.ts";
 import { HEX_COLOR_PATTERN, expandShorthandHexColor } from "../src/theme/hex-color.ts";
 import { createThrottledSender, getColorWithCurrentAlpha, getSwatchValue } from "./color-input.ts";
+import { initPalettePanel, showPalette } from "./palette-panel.ts";
 import {
   ACCORDION_GROUP_NAME,
   initSyntaxPanel,
@@ -32,6 +33,8 @@ declare function acquireVsCodeApi(): {
 interface PersistedViewState {
   searchText: string;
   expandedCategoryIds: string[];
+  /** Missing in a state saved before the palette existed. */
+  paletteCategoryIds?: string[];
 }
 
 interface ColorKeyRow {
@@ -130,6 +133,7 @@ const adjustmentChangeSender = createThrottledSender<string, ColorAdjustment>((t
 });
 
 let expandedCategoryIds = new Set<string>();
+let paletteCategoryIds: string[] | undefined;
 let builtCategoryStructure = "";
 let themeNameMode: "create" | "rename" | null = null;
 let shownSyncState: SyncState = { status: "off" };
@@ -147,6 +151,20 @@ function startPage(): void {
     changeTokenInspectionEnabled: isEnabled => postToExtension({ kind: "setTokenInspectionEnabled", isEnabled }),
   });
 
+  initPalettePanel(
+    getElementById<HTMLDivElement>("paletteCategoryList"),
+    getElementById<HTMLDivElement>("paletteSwatchList"),
+    {
+      replaceColors: colors => postToExtension({ kind: "replaceColors", colors }),
+      revertColors: colorIds => postToExtension({ kind: "revertColors", colorIds }),
+      changeTickedCategories: categoryIds => {
+        paletteCategoryIds = categoryIds;
+        persistViewState();
+      },
+    },
+    paletteCategoryIds
+  );
+
   listenForMessages();
   listenForThemeCommands();
   listenForMixCommands();
@@ -163,6 +181,7 @@ function restorePersistedViewState(): void {
 
   searchInput.value = persistedViewState.searchText;
   expandedCategoryIds = new Set(persistedViewState.expandedCategoryIds);
+  paletteCategoryIds = persistedViewState.paletteCategoryIds;
 }
 
 function persistViewState(): void {
@@ -175,6 +194,7 @@ function persistViewState(): void {
   vscodeApi.setState({
     searchText: searchInput.value,
     expandedCategoryIds: [...expandedCategoryIds],
+    paletteCategoryIds,
   });
 }
 
@@ -205,6 +225,7 @@ function showState(state: EditorState): void {
   showCategories(state.categories, state.wholeThemeTakenFromLabel);
   showTakenFrom(wholeThemeTakenFrom, state.wholeThemeTakenFromLabel);
   showColorAdjustments(state.colorAdjustments);
+  showPalette(state.categories);
   showTokenColorRules(state.tokenColorRules);
   showTokenInspectionEnabled(state.isTokenInspectionEnabled);
   showApplyFailure(state.applyFailure);

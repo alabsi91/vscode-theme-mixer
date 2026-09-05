@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- A palette section. The theme's colors are grouped by hue into swatches, and picking a new color
+  for a swatch changes every key that uses that hue. Tick which parts of the window take part.
+- Each swatch has a revert button that puts the saved colors back for that group only.
+
 ## 0.1.0
 
 First release.

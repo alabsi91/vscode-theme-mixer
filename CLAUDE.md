@@ -7,7 +7,7 @@ A VS Code extension that mixes, edits and exports color themes. TypeScript, ESM,
 ```bash
 npx tsc --noEmit                               # must pass clean
 npx eslint --config ./eslint.config.mjs --fix src webview
-node --test src/syntax/token-color-matcher.test.ts src/sync/theme-sync-merge.test.ts src/theme/adjust-colors.test.ts
+node --test src/syntax/token-color-matcher.test.ts src/sync/theme-sync-merge.test.ts src/theme/adjust-colors.test.ts src/theme/theme-palette.test.ts
 npm run build
 npx vsce package --no-dependencies --allow-missing-repository
 ```
@@ -45,6 +45,11 @@ stored colors stay unadjusted. `composeAdjustedTheme` bakes them in and strips t
 theme leaves the editor: `writeGeneratedTheme`, `openExportableTheme`, and the panel's `adjustedValue`.
 The token inspector stays on the stored theme on purpose. A new rule seeded from a composed color would
 carry the adjustment baked in and then be adjusted again.
+
+The palette groups on the **saved** theme's values, never the working copy's. Every replacement is computed
+from the saved value of each key against the saved swatch color. That is what keeps a group stable while
+dragging and makes dragging back to the original color restore the saved values exactly. Groups only change
+on Save, Discard, or a tick in the category list.
 
 ## Storage and the working copy
 
@@ -114,6 +119,7 @@ Run it after touching `github-gist-client.ts`.
 | `src/theme/hex-color.ts`                   | Hex parse and format. Shared with the webview, no vscode import      |
 | `src/theme/adjust-colors.ts`               | The slider values and the color math. Pure, tested                   |
 | `src/theme/compose-adjusted-theme.ts`      | Bakes the sliders into a theme. The one caller of the math           |
+| `src/theme/theme-palette.ts`               | Groups colors by hue, swaps one everywhere. Pure, tested, webview too |
 | `src/sync/github-gist-client.ts`           | The gists API over `fetch`. No `vscode` import. Never throws         |
 | `src/sync/theme-sync-merge.ts`             | Vector clocks and the merge. Pure, tested                            |
 | `src/sync/theme-sync.ts`                   | The sync run, auth, the gist cache, what a pull paints               |

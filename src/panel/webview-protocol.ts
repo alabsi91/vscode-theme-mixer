@@ -13,6 +13,8 @@ export interface ColorKeyView {
   description: string;
   /** Null when the theme leaves the key to its default. */
   value: string | null;
+  /** The value in the saved theme. Same as `value` while nothing is unsaved. */
+  savedValue: string | null;
   defaultValue: string | null;
   /** The value after the adjustment sliders. Same as `value` when no slider touches it. */
   adjustedValue: string | null;
@@ -102,6 +104,10 @@ export type WebviewToExtensionMessage =
   | { kind: "setBase"; base: ThemeBaseKind }
   | { kind: "setColor"; colorId: string; value: string | null }
   | { kind: "setColorAdjustment"; takeTargetId: string; adjustment: ColorAdjustment }
+  /** One edit for many keys at once. The palette swaps a color everywhere it is used. */
+  | { kind: "replaceColors"; colors: Record<string, string> }
+  /** Back to the saved values for these only. */
+  | { kind: "revertColors"; colorIds: string[] }
   | { kind: "flashColor"; colorId: string }
   | { kind: "selectSavedTheme"; savedThemeId: string }
   | { kind: "createSavedTheme"; name: string }

@@ -233,6 +233,13 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
             <div class="adjust-row-list" id="adjustCategoryList"></div>
           </details>
 
+          <details class="panel-section" id="paletteSection">
+            <summary class="section-header">Palette</summary>
+            <p class="palette-hint">Pick a new color to change it everywhere it is used.</p>
+            <div class="palette-category-list" id="paletteCategoryList"></div>
+            <div class="palette-swatch-list" id="paletteSwatchList"></div>
+          </details>
+
           <details class="panel-section colors-section" id="colorsSection">
             <summary class="section-header">Colors</summary>
             <input type="search" id="searchInput" placeholder="Search colors" />

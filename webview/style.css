@@ -299,6 +299,68 @@ details[open] > .category-summary::before {
   padding: 2px 10px;
 }
 
+/* ------------------------------------------------------------------ palette */
+
+.palette-hint {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.palette-category-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 10px 0 14px;
+}
+
+.palette-category {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+}
+
+.palette-category > input {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--vscode-progressBar-background, var(--vscode-focusBorder));
+}
+
+.palette-category:has(input:checked) {
+  color: var(--vscode-foreground);
+}
+
+.palette-swatch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.palette-row-count {
+  flex: none;
+  min-width: 56px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  text-align: right;
+}
+
 /* ------------------------------------------------------------------ controls */
 
 button {
@@ -478,6 +540,7 @@ input::placeholder {
 .flash-button {
   flex: none;
   width: 22px;
+  height: 22px;
   padding: 0;
   line-height: 1;
 }

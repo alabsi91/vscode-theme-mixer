@@ -29,6 +29,7 @@ import {
   installThemeAsExtension,
 } from "./theme/export-theme.ts";
 import { createEmptyTheme } from "./theme/generated-theme-file.ts";
+import { HEX_COLOR_PATTERN } from "./theme/hex-color.ts";
 import {
   createSavedThemeId,
   deleteSavedTheme,
@@ -53,6 +54,7 @@ import {
   openExportableTheme,
   recordApplyFailure,
   recordApplyResult,
+  revertColors,
   saveWorkingTheme,
   setEditingBase,
   settleUnsavedChanges,
@@ -105,7 +107,7 @@ export function deactivate() {}
 
 async function createEditorState(context: vscode.ExtensionContext): Promise<EditorState> {
   const base = getEditingBase(context);
-  const { savedThemeId, theme, takenFromSources } = await openEditableTheme(context, base);
+  const { savedThemeId, theme, savedTheme, takenFromSources } = await openEditableTheme(context, base);
 
   const savedThemeSummaries = await listSavedThemes(context);
   const savedThemes: SavedThemeView[] = savedThemeSummaries
@@ -120,7 +122,7 @@ async function createEditorState(context: vscode.ExtensionContext): Promise<Edit
   const wholeThemeSource = takenFromSources[WHOLE_THEME_TAKE_TARGET_ID];
 
   const adjustedTheme = await composeAdjustedTheme(context, theme);
-  const categoryViews = await createColorCategoryViews(context, theme, base, adjustedTheme);
+  const categoryViews = await createColorCategoryViews(context, theme, base, adjustedTheme, savedTheme);
 
   // Not a workbench bucket. A row to borrow from, no keys to browse.
   const syntaxHighlightingCategory: ColorCategoryView = {
@@ -228,6 +230,24 @@ async function handleWebviewMessage(
       }
 
       recordApplyResult(await applyThemeDocument(context, base, theme));
+      break;
+    }
+
+    case "replaceColors": {
+      const { theme } = await beginEdit(context, base);
+
+      for (const [colorId, value] of Object.entries(message.colors)) {
+        if (HEX_COLOR_PATTERN.test(value)) {
+          theme.colors[colorId] = value;
+        }
+      }
+
+      recordApplyResult(await applyThemeDocument(context, base, theme));
+      break;
+    }
+
+    case "revertColors": {
+      await revertColors(context, base, message.colorIds);
       break;
     }
 

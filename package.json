@@ -2,7 +2,7 @@
   "name": "vscode-theme-mixer",
   "displayName": "Theme Mixer",
   "description": "Mix, tweak and live-preview VS Code color themes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Ahmed ALABSI",
   "publisher": "plant",
   "icon": "icons/icon.png",
