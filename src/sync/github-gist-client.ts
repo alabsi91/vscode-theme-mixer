@@ -6,6 +6,8 @@ const GITHUB_API_VERSION = "2026-03-10";
 
 const GISTS_PAGE_SIZE = 100;
 
+const REQUEST_TIMEOUT_MILLISECONDS = 30_000;
+
 /** Only these hosts ever see the token. */
 const GITHUB_HOST_NAME_PATTERN = /(?:^|\.)(?:github\.com|githubusercontent\.com)$/;
 
@@ -221,7 +223,13 @@ async function sendRequest(
   }
 
   try {
-    const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      // A socket that connects and then goes quiet would otherwise hold a sync run for minutes.
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MILLISECONDS),
+    });
     return { ok: true, value: response };
   } catch (error) {
     return { ok: false, status: 0, message: getErrorMessage(error) };

@@ -65,7 +65,8 @@ entire Settings Sync run — silently, forever. Sync goes through a gist instead
 **One write chain.** Every write under `themes/` runs through `runStorageOperation`, one at a time.
 Silent operations (the migration, a sync apply) do not fire `onDidWriteSavedThemes`; everything else
 does, and that event is what schedules a sync run. Never call an exported write from inside another
-chained operation — it deadlocks. The unchained bodies are the `...FileAndEntry` functions.
+chained operation — it deadlocks. The unchained bodies are the `...FileAndEntry` functions and
+`openActiveSavedThemeInChain`.
 
 Edits go to an in-memory working copy (`workingThemeByBase`), which paints immediately but reaches
 storage only on Save. Discard re-applies the saved version. Anything that would replace unsaved edits

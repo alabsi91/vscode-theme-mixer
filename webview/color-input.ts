@@ -25,7 +25,13 @@ export function getColorWithCurrentAlpha(currentValue: string | null | undefined
     return pickedValue;
   }
 
-  return pickedValue + expandedValue.slice(7);
+  // Many keys default to fully transparent. Keeping that alpha would store the pick as invisible.
+  const alphaHexDigits = expandedValue.slice(7);
+  if (alphaHexDigits === "00") {
+    return pickedValue;
+  }
+
+  return pickedValue + alphaHexDigits;
 }
 
 /** Sends the first change at once, then holds what follows for a moment. The newest value per key wins. */

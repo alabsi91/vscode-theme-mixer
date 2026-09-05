@@ -9,8 +9,10 @@ import {
   getActiveSavedThemeId,
   getTakenFromSources,
   readSavedTheme,
+  runStorageOperation,
   setActiveSavedThemeId,
   writeSavedTheme,
+  writeSavedThemeFileAndEntry,
 } from "./theme-storage.ts";
 
 import type { ApplyThemeResult } from "./apply-theme.ts";
@@ -82,19 +84,25 @@ export async function beginEdit(context: vscode.ExtensionContext, base: ThemeBas
 
 /** False when the user backed out of the prompt about changes from another machine. */
 export async function saveWorkingTheme(context: vscode.ExtensionContext, base: ThemeBaseKind): Promise<boolean> {
-  const workingTheme = workingThemeByBase.get(base);
-  if (!workingTheme) {
+  // A pull sets the flag inside the chain. It has to be read there too.
+  const workingThemeUnderRemoteChanges = await runStorageOperation(async () => {
+    const workingTheme = workingThemeByBase.get(base);
+    if (!workingTheme) return;
+
+    if (workingTheme.hasRemoteChangesUnderneath) {
+      return workingTheme;
+    }
+
+    await writeSavedThemeFileAndEntry(context, workingTheme.savedThemeId, workingTheme.theme, workingTheme.takenFromSources);
+    workingThemeByBase.delete(base);
+  });
+
+  if (!workingThemeUnderRemoteChanges) {
     return true;
   }
 
-  if (workingTheme.hasRemoteChangesUnderneath) {
-    return saveWorkingThemeOverRemoteChanges(context, base, workingTheme);
-  }
-
-  await writeSavedTheme(context, workingTheme.savedThemeId, workingTheme.theme, workingTheme.takenFromSources);
-  workingThemeByBase.delete(base);
-
-  return true;
+  // The modal prompt waits outside the chain.
+  return saveWorkingThemeOverRemoteChanges(context, base, workingThemeUnderRemoteChanges);
 }
 
 export async function discardWorkingTheme(context: vscode.ExtensionContext, base: ThemeBaseKind): Promise<void> {
@@ -153,29 +161,70 @@ export async function settleUnsavedChanges(context: vscode.ExtensionContext, bas
   return false;
 }
 
-/** Creates one the first time, because every edit needs somewhere to land. */
-export async function openActiveSavedTheme(
-  context: vscode.ExtensionContext,
-  base: ThemeBaseKind
-): Promise<{ savedThemeId: string; theme: ColorThemeDocument }> {
-  const activeSavedThemeId = getActiveSavedThemeId(context, base);
+interface ActiveSavedTheme {
+  savedThemeId: string;
+  theme: ColorThemeDocument;
+}
 
-  if (activeSavedThemeId) {
-    try {
-      return { savedThemeId: activeSavedThemeId, theme: await readSavedTheme(context, activeSavedThemeId) };
-    } catch {
-      // The file is gone or corrupt. Start fresh rather than block every edit.
-    }
+/** Creates one the first time, because every edit needs somewhere to land. */
+export async function openActiveSavedTheme(context: vscode.ExtensionContext, base: ThemeBaseKind): Promise<ActiveSavedTheme> {
+  const activeSavedTheme = await readActiveSavedTheme(context, base);
+  if (activeSavedTheme) {
+    return activeSavedTheme;
   }
 
+  return runStorageOperation(() => createActiveSavedTheme(context, base));
+}
+
+/** `openActiveSavedTheme` for a caller inside `runStorageOperation`. The caller holds the chain. */
+export async function openActiveSavedThemeInChain(
+  context: vscode.ExtensionContext,
+  base: ThemeBaseKind
+): Promise<ActiveSavedTheme> {
+  const activeSavedTheme = await readActiveSavedTheme(context, base);
+  if (activeSavedTheme) {
+    return activeSavedTheme;
+  }
+
+  return createActiveSavedTheme(context, base);
+}
+
+async function readActiveSavedTheme(
+  context: vscode.ExtensionContext,
+  base: ThemeBaseKind
+): Promise<ActiveSavedTheme | undefined> {
+  const activeSavedThemeId = getActiveSavedThemeId(context, base);
+  if (!activeSavedThemeId) return;
+
+  try {
+    return { savedThemeId: activeSavedThemeId, theme: await readSavedTheme(context, activeSavedThemeId) };
+  } catch (error) {
+    // A missing or corrupt file starts fresh. Any other failure must not swap the theme for an empty one.
+    if (!isMissingOrCorruptFile(error)) {
+      throw error;
+    }
+
+    return;
+  }
+}
+
+async function createActiveSavedTheme(context: vscode.ExtensionContext, base: ThemeBaseKind): Promise<ActiveSavedTheme> {
   const savedThemeId = createSavedThemeId();
   const theme = createEmptyTheme(base);
   theme.name = DEFAULT_NEW_THEME_NAME;
 
-  await writeSavedTheme(context, savedThemeId, theme, {});
+  await writeSavedThemeFileAndEntry(context, savedThemeId, theme, {});
   await setActiveSavedThemeId(context, base, savedThemeId);
 
   return { savedThemeId, theme };
+}
+
+function isMissingOrCorruptFile(error: unknown): boolean {
+  if (error instanceof vscode.FileSystemError) {
+    return error.code === "FileNotFound";
+  }
+
+  return error instanceof SyntaxError;
 }
 
 export function getMostRecentApplyFailure(): string | null {

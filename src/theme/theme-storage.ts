@@ -5,6 +5,7 @@ import {
   classifyGeneratedThemeWriteError,
   createEmptyTheme,
   getErrorMessage,
+  normalizeColorThemeDocument,
   writeGeneratedTheme,
 } from "./generated-theme-file.ts";
 
@@ -127,7 +128,7 @@ export async function listSavedThemes(context: vscode.ExtensionContext): Promise
 
 export async function readSavedTheme(context: vscode.ExtensionContext, savedThemeId: string): Promise<ColorThemeDocument> {
   const contents = await vscode.workspace.fs.readFile(getSavedThemeUri(context, savedThemeId));
-  return JSON.parse(new TextDecoder().decode(contents)) as ColorThemeDocument;
+  return normalizeColorThemeDocument(JSON.parse(new TextDecoder().decode(contents)));
 }
 
 export async function getTakenFromSources(
@@ -366,8 +367,12 @@ async function migrateThemeIndex(context: vscode.ExtensionContext): Promise<void
       const replacements = await removeSavedThemeFileAndReplaceWhereActive(context, savedThemeId, index);
 
       for (const [base, replacement] of replacements) {
-        if (replacement === null) {
+        if (replacement !== null) continue;
+
+        try {
           await writeGeneratedTheme(context, base, createEmptyTheme(base));
+        } catch {
+          // An unwritable install directory must not stop the migration. Applying reports it later.
         }
       }
     }
@@ -385,7 +390,8 @@ async function migrateThemeIndex(context: vscode.ExtensionContext): Promise<void
 // ---------------------------------------------------------------------------------------------
 // Inside the chain
 
-async function writeSavedThemeFileAndEntry(
+/** Runs inside `runStorageOperation`, the caller holds the chain. */
+export async function writeSavedThemeFileAndEntry(
   context: vscode.ExtensionContext,
   savedThemeId: string,
   theme: ColorThemeDocument,

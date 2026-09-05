@@ -40,7 +40,11 @@ export function applyThemeDocument(
     return pendingApply.result;
   }
 
-  const { promise: result, resolve: resolveResult } = Promise.withResolvers<ApplyThemeResult>();
+  // The remote extension host runs Node 20, which has no Promise.withResolvers.
+  let resolveResult!: (result: ApplyThemeResult) => void;
+  const result = new Promise<ApplyThemeResult>(resolve => {
+    resolveResult = resolve;
+  });
 
   const timer = setTimeout(() => {
     const readyApply = pendingAppliesByBase.get(base);

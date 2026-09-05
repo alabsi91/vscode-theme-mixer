@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 import { applyThemeDocument } from "../theme/apply-theme.ts";
+import { normalizeColorThemeDocument } from "../theme/generated-theme-file.ts";
 import {
   THEME_BASE_KINDS,
   applySyncPlan,
@@ -21,6 +22,7 @@ import {
   bumpRevisionVector,
   createEmptyThemeIndex,
   createSyncPlan,
+  isTombstone,
   willSyncPlanChangeGist,
 } from "./theme-sync-merge.ts";
 
@@ -170,7 +172,11 @@ export async function requestSync(context: vscode.ExtensionContext): Promise<voi
       shouldRunAgain = false;
       setSyncState({ status: "syncing", accountLabel, lastSyncedAt: syncState.lastSyncedAt });
 
-      const outcome = await runSync(context);
+      // A throw would leave the state on "syncing", and the panel hides every button while syncing.
+      const outcome = await runSync(context).catch((error: unknown): SyncOutcome => ({
+        status: "error",
+        message: getErrorMessage(error),
+      }));
 
       if (isSyncEnabled(context)) {
         await recordSyncOutcome(context, outcome);
@@ -329,7 +335,10 @@ async function checkSyncedThemeCount(context: vscode.ExtensionContext): Promise<
     return { status: "error", message: "themes/index.json was written by a newer Theme Editor" };
   }
 
-  if (Object.keys(localIndex.themes).length > MAXIMUM_SYNCED_THEMES) {
+  // Tombstones have no file. They do not count against the gist's file limit.
+  const liveThemeCount = Object.values(localIndex.themes).filter(entry => !isTombstone(entry)).length;
+
+  if (liveThemeCount > MAXIMUM_SYNCED_THEMES) {
     return {
       status: "paused",
       message: `More than ${MAXIMUM_SYNCED_THEMES} themes cannot sync. Delete some or turn sync off.`,
@@ -348,6 +357,8 @@ async function mergeAndApply(
   cache: RemoteGistCache,
   machineId: string
 ): Promise<MergeAndApplyResult> {
+  await readTruncatedRemoteFiles(token, cache);
+
   const mergeAndApplyInsideChain = async (): Promise<MergeAndApplyResult> => {
     const localIndex = await readThemeIndex(context);
 
@@ -356,7 +367,7 @@ async function mergeAndApply(
       remote: getRemoteIndexWithOrphans(cache, machineId),
       machineId,
       readLocalDocument: savedThemeId => readLocalDocument(context, savedThemeId),
-      readRemoteDocument: savedThemeId => readRemoteDocument(token, cache, savedThemeId),
+      readRemoteDocument: savedThemeId => Promise.resolve(readRemoteDocument(cache, savedThemeId)),
       now: new Date().toISOString(),
       createId: createSavedThemeId,
     });
@@ -616,28 +627,27 @@ function getRemoteIndexWithOrphans(cache: RemoteGistCache, machineId: string): T
   return index;
 }
 
-async function readRemoteDocument(
-  token: string,
-  cache: RemoteGistCache,
-  savedThemeId: string
-): Promise<ColorThemeDocument | undefined> {
-  const fileName = `${savedThemeId}.json`;
-
-  const file = cache.files[fileName];
-  if (!file || file.size > MAXIMUM_GIST_FILE_BYTES) {
-    return undefined;
-  }
-
-  const content = await readRemoteFileContent(token, cache.files, fileName);
+// Runs inside the chain. It reads only what the cache holds, never the network.
+function readRemoteDocument(cache: RemoteGistCache, savedThemeId: string): ColorThemeDocument | undefined {
+  const content = cache.files[`${savedThemeId}.json`]?.content;
   if (content === undefined) {
     return undefined;
   }
 
   try {
     const parsed: unknown = JSON.parse(content);
-    return isColorThemeDocument(parsed) ? parsed : undefined;
+    return isColorThemeDocument(parsed) ? normalizeColorThemeDocument(parsed) : undefined;
   } catch {
     return undefined;
+  }
+}
+
+// Runs before the chain is taken. A file that cannot be fetched keeps no content. The merge skips that theme.
+async function readTruncatedRemoteFiles(token: string, cache: RemoteGistCache): Promise<void> {
+  for (const [fileName, file] of Object.entries(cache.files)) {
+    if (file.content !== undefined || file.size > MAXIMUM_GIST_FILE_BYTES) continue;
+
+    await readRemoteFileContent(token, cache.files, fileName);
   }
 }
 

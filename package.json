@@ -17,6 +17,9 @@
   "homepage": "https://github.com/alabsi91/vscode-theme-editor#readme",
   "type": "module",
   "main": "./lib/index.mjs",
+  "extensionKind": [
+    "ui"
+  ],
   "engines": {
     "vscode": "^1.100.0"
   },

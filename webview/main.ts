@@ -251,7 +251,10 @@ function showSavedThemes(savedThemes: SavedThemeView[]): void {
   duplicateThemeButton.disabled = !hasSelectedSavedTheme;
   deleteThemeButton.disabled = !hasSelectedSavedTheme;
 
-  if (themeNameMode === "rename" && activeSavedTheme) {
+  // A state that arrives while the field has focus is older than what the user is typing.
+  const isTypingThemeName = document.activeElement === themeNameInput;
+
+  if (themeNameMode === "rename" && activeSavedTheme && !isTypingThemeName) {
     themeNameInput.value = activeSavedTheme.name;
   }
 }

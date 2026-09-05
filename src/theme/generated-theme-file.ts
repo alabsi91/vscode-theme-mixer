@@ -55,6 +55,31 @@ export async function writeGeneratedTheme(
   await vscode.workspace.fs.writeFile(uri, contents);
 }
 
+/** Replaces missing or wrong parts with empty ones. A hand-edited file loses only what it got wrong. */
+export function normalizeColorThemeDocument(value: unknown): ColorThemeDocument {
+  const record = isPlainRecord(value) ? value : {};
+  const type = record.type === "light" ? "light" : "dark";
+
+  const theme: ColorThemeDocument = {
+    name: typeof record.name === "string" ? record.name : CONTRIBUTED_THEME_IDS[type],
+    type,
+    semanticHighlighting: record.semanticHighlighting === true,
+    colors: isPlainRecord(record.colors) ? (record.colors as Record<string, string>) : {},
+    semanticTokenColors: isPlainRecord(record.semanticTokenColors) ? record.semanticTokenColors : {},
+    tokenColors: Array.isArray(record.tokenColors) ? record.tokenColors : [],
+  };
+
+  if (isPlainRecord(record.colorAdjustments)) {
+    theme.colorAdjustments = record.colorAdjustments as Record<string, ColorAdjustment>;
+  }
+
+  return theme;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function classifyGeneratedThemeWriteError(error: unknown): {
   reason: GeneratedThemeWriteFailureReason;
   message: string;

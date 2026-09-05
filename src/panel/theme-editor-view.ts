@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import * as vscode from "vscode";
 
+import { getErrorMessage } from "../theme/generated-theme-file.ts";
+
 import type {
   EditorState,
   ExtensionToWebviewMessage,
@@ -63,11 +65,16 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = await this.createPageHtml(webviewView.webview);
   }
 
+  // Failures reach the panel through the state message. When that one cannot be built, the panel stays empty and silent.
   async sendState(): Promise<void> {
     if (!this.view?.visible) return;
 
-    const state = await this.host.getEditorState();
-    await this.postMessage({ kind: "state", state });
+    try {
+      const state = await this.host.getEditorState();
+      await this.postMessage({ kind: "state", state });
+    } catch (error) {
+      void vscode.window.showErrorMessage(`Theme Editor: the panel could not be filled in. ${getErrorMessage(error)}`);
+    }
   }
 
   async showTokenInspection(inspection: TokenInspectionView | null): Promise<void> {
@@ -80,8 +87,7 @@ export class ThemeEditorViewProvider implements vscode.WebviewViewProvider {
         await this.host.handleWebviewMessage(message);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`Theme Editor: ${errorMessage}`);
+      void vscode.window.showErrorMessage(`Theme Editor: ${getErrorMessage(error)}`);
     }
 
     await this.sendState();

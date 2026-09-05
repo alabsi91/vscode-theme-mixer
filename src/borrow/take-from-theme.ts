@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 
 import { SYNTAX_HIGHLIGHTING_TAKE_TARGET_ID, WHOLE_THEME_TAKE_TARGET_ID } from "../panel/webview-protocol.ts";
 import { applyThemeDocument } from "../theme/apply-theme.ts";
-import { getTakenFromSources, writeSavedTheme } from "../theme/theme-storage.ts";
+import { getTakenFromSources, runStorageOperation, writeSavedThemeFileAndEntry } from "../theme/theme-storage.ts";
 import { getColorIdsInBucket } from "../theme/workbench-color-catalog.ts";
-import { getWorkingTheme, openActiveSavedTheme, openEditableTheme, recordApplyResult } from "../theme/working-theme.ts";
+import { getWorkingTheme, openActiveSavedThemeInChain, openEditableTheme, recordApplyResult } from "../theme/working-theme.ts";
 import { listInstalledColorThemes, loadInstalledColorTheme } from "./installed-themes.ts";
 import { pickThemeWithLivePreview } from "./pick-and-take.ts";
 
@@ -141,13 +141,18 @@ async function commitTake(
   sourceTheme: ColorThemeDocument,
   takenFromSource: TakenFromSource | null
 ): Promise<void> {
-  const { savedThemeId, theme: savedTheme } = await openActiveSavedTheme(context, base);
+  // A sync pull must not land between the read and the write.
+  const savedThemeWithTake = await runStorageOperation(async () => {
+    const { savedThemeId, theme: savedTheme } = await openActiveSavedThemeInChain(context, base);
+    const themeWithTake = takeTarget.take(savedTheme, sourceTheme);
 
-  const savedThemeWithTake = takeTarget.take(savedTheme, sourceTheme);
-  const savedSources = { ...(await getTakenFromSources(context, savedThemeId)) };
-  applyTakenFromSource(savedSources, takeTargetId, takenFromSource);
+    const savedSources = { ...(await getTakenFromSources(context, savedThemeId)) };
+    applyTakenFromSource(savedSources, takeTargetId, takenFromSource);
 
-  await writeSavedTheme(context, savedThemeId, savedThemeWithTake, savedSources);
+    await writeSavedThemeFileAndEntry(context, savedThemeId, themeWithTake, savedSources);
+
+    return themeWithTake;
+  });
 
   const workingTheme = getWorkingTheme(base);
 

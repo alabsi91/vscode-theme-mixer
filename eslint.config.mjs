@@ -58,6 +58,8 @@ export default defineConfig(
           ignoreRestSiblings: true,
         },
       ],
+      // The remote extension host runs Node 20, which has no Promise.withResolvers.
+      "unicorn/prefer-promise-with-resolvers": "off",
       "unicorn/consistent-function-scoping": "off",
       "unicorn/prefer-spread": "off",
       "unicorn/no-nested-ternary": "off",

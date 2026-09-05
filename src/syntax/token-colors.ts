@@ -79,6 +79,11 @@ let textMateTokenizer: TextMateTokenizer | undefined;
 
 let tokenInspectionListener: vscode.Disposable | undefined;
 
+let pendingInspectionTimer: ReturnType<typeof setTimeout> | undefined;
+
+// Bumped when inspection is turned on or off. A report from before the switch is thrown away.
+let tokenInspectionGeneration = 0;
+
 export function isTokenInspectionEnabled(): boolean {
   return tokenInspectionListener !== undefined;
 }
@@ -92,6 +97,11 @@ export function setTokenInspectionEnabled(
   tokenInspectionListener?.dispose();
   tokenInspectionListener = undefined;
 
+  // A pending report must not land after inspection was turned off.
+  clearTimeout(pendingInspectionTimer);
+  pendingInspectionTimer = undefined;
+  tokenInspectionGeneration++;
+
   if (!isEnabled) {
     void getThemeEditorView().showTokenInspection(null);
     return;
@@ -99,31 +109,34 @@ export function setTokenInspectionEnabled(
 
   textMateTokenizer ??= new TextMateTokenizer(context.extensionUri);
 
-  let pendingInspectionTimer: NodeJS.Timeout | undefined;
+  const generation = tokenInspectionGeneration;
 
   tokenInspectionListener = vscode.window.onDidChangeTextEditorSelection(event => {
     clearTimeout(pendingInspectionTimer);
     pendingInspectionTimer = setTimeout(() => {
-      void reportTokenInspection(context, event.textEditor, getThemeEditorView);
+      void reportTokenInspection(context, event.textEditor, getThemeEditorView, generation);
     }, TOKEN_INSPECTION_DEBOUNCE_MILLISECONDS);
   });
 
   const activeEditor = vscode.window.activeTextEditor;
   if (activeEditor) {
-    void reportTokenInspection(context, activeEditor, getThemeEditorView);
+    void reportTokenInspection(context, activeEditor, getThemeEditorView, generation);
   }
 }
 
 async function reportTokenInspection(
   context: vscode.ExtensionContext,
   editor: vscode.TextEditor,
-  getThemeEditorView: () => ThemeEditorViewProvider
+  getThemeEditorView: () => ThemeEditorViewProvider,
+  generation: number
 ): Promise<void> {
   if (!textMateTokenizer) return;
 
   try {
     const position = editor.selection.active;
     const token = await textMateTokenizer.getTokenAtPosition(editor.document, position);
+
+    if (generation !== tokenInspectionGeneration) return;
 
     if (!token) {
       await getThemeEditorView().showTokenInspection(null);
@@ -138,6 +151,8 @@ async function reportTokenInspection(
 
     const semanticToken = await getSemanticTokenAtPosition(editor.document, position);
 
+    if (generation !== tokenInspectionGeneration) return;
+
     await getThemeEditorView().showTokenInspection({
       text: token.text,
       scopes: token.scopes,
@@ -147,6 +162,8 @@ async function reportTokenInspection(
     });
   } catch {
     // A grammar that will not load must never break the panel.
-    await getThemeEditorView().showTokenInspection(null);
+    if (generation === tokenInspectionGeneration) {
+      await getThemeEditorView().showTokenInspection(null);
+    }
   }
 }
