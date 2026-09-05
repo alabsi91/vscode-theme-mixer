@@ -59,6 +59,7 @@ const FALLBACK_NEW_RULE_COLOR = "#ff8800";
 
 interface TokenColorRuleRow {
   ruleIndex: number;
+  scopes: string[];
   rowElement: HTMLElement;
   colorInput: HTMLInputElement;
   fontStyleButtonByName: Map<FontStyleName, HTMLButtonElement>;
@@ -329,6 +330,7 @@ function createRuleRow(rule: TokenColorRuleView): TokenColorRuleRow {
 
   return {
     ruleIndex: rule.index,
+    scopes: rule.scopes,
     rowElement,
     colorInput,
     fontStyleButtonByName,
@@ -538,9 +540,13 @@ function listenForInspectorCommands(): void {
   });
 
   inspectorCreateRuleButton.addEventListener("click", () => {
-    if (scopeForNewRule) {
-      panelCallbacks?.createTokenColorRuleForScope(scopeForNewRule, inspectorCreateRuleColorInput.value);
-    }
+    if (!scopeForNewRule) return;
+
+    panelCallbacks?.createTokenColorRuleForScope(scopeForNewRule, inspectorCreateRuleColorInput.value);
+
+    // One rule per press. The offer comes back with the next inspection, when the token has no rule of its own.
+    scopeForNewRule = "";
+    inspectorCreateRuleRow.hidden = true;
   });
 }
 
@@ -581,7 +587,8 @@ function showInspectionScopes(scopes: string[]): void {
 // only way to change this token alone.
 function showCreateRuleOffer(inspection: TokenInspectionView): void {
   const mostSpecificScope = inspection.scopes.at(-1) ?? "";
-  const canCreateRule = mostSpecificScope !== "";
+  const hasOwnRule = ruleRows.some(row => row.scopes.includes(mostSpecificScope));
+  const canCreateRule = mostSpecificScope !== "" && !hasOwnRule;
 
   scopeForNewRule = canCreateRule ? mostSpecificScope : "";
   inspectorCreateRuleRow.hidden = !canCreateRule;
