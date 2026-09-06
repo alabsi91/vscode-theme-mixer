@@ -2,6 +2,10 @@
 
 Mix, tweak and live-preview VS Code color themes from the sidebar.
 
+<p align="center">
+  <img src="media/demo.gif" alt="Theme Mixer demo" width="640">
+</p>
+
 You like one theme's syntax colors and another one's editor chrome. This lets you take each part from
 wherever you want, tweak whatever still bothers you, and export the result as a real theme.
 
