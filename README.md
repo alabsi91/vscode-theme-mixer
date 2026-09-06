@@ -24,6 +24,12 @@ All 982 workbench color ids, grouped into eleven browsable sections with search.
 color picker, a hex field, and a flash button that blinks the color so you can find what it actually
 paints.
 
+## Swap a color everywhere
+
+The palette groups the theme's colors by hue into swatches. Pick a new color for a swatch and every
+key that uses that hue follows, so a theme's accent changes in one move instead of a hundred. Tick
+which parts of the window take part, and each swatch has a revert button that puts that group back.
+
 ## Adjust colors
 
 Brightness, contrast, saturation and hue sliders. Tick the parts to adjust, such as the terminal, the
@@ -44,7 +50,10 @@ case where editing a rule looks broken but isn't.
 ## Save and discard
 
 Edits paint immediately but are not permanent. Save keeps them, Discard puts the last saved version
-back.
+back. Hold Compare to see the saved version, let go to get the edits back.
+
+You can keep as many saved themes as you like per base. New starts an empty one, Duplicate copies the
+current one to try something without losing it, and Rename and Delete do what they say.
 
 ## Export and install
 
